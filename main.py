@@ -4,8 +4,12 @@ from typing import Dict, List
 from models import RankingEntry, Competition, Player
 from metrix import MetrixAPI
 
+"""main.py: Generator rankingu Zimowej Ligi DGW."""
 
-class ZimowyDGW2022:
+__author__ = "Jakub Wroniecki"
+__copyright__ = "Copyright 2022, Jakub Wroniecki, see LICENSE.txt for details."
+
+class ZimowyDGW:
 
     @dataclass
     class DGWEntry:
@@ -26,16 +30,17 @@ class ZimowyDGW2022:
         def __hash__(self):
             return hash(self.player)
 
-    def __init__(self):
-        self.competition_ids = [1963931,
-                                1989984,
-                                1995699,
-                                2003169,
-                                2004158,
-                                2008480,
-                                2014161,
-                                2020455,
-                                2025408]
+    def __init__(self, competition_ids: List[int], title=''):
+        self.competition_ids = competition_ids
+        # self.competition_ids = [1963931,
+        #                         1989984,
+        #                         1995699,
+        #                         2003169,
+        #                         2004158,
+        #                         2008480,
+        #                         2014161,
+        #                         2020455,
+        #                         2025408, 2031939]
 
         self.entries = {
             "OPEN": {},
@@ -44,7 +49,7 @@ class ZimowyDGW2022:
             "JUNIOR": {}
         }
 
-        self.entries_sorted: Dict[str, List[ZimowyDGW2022.DGWEntry]] = {}
+        self.entries_sorted: Dict[str, List[ZimowyDGW.DGWEntry]] = {}
 
         self.rankings = {
             "OPEN": {},
@@ -55,6 +60,7 @@ class ZimowyDGW2022:
         self.competitions: List[Competition] = []
 
         self.errors: List[str] = []
+        self.title = title
 
     def reload(self) -> List[Competition]:
         api = MetrixAPI()
@@ -90,7 +96,7 @@ class ZimowyDGW2022:
                     filler_ranking.extend(ranking.entries)
 
                 for entry in ranking.entries:
-                    dgw_entry: ZimowyDGW2022.DGWEntry = self.entries[class_name].get(entry[1].player, self.DGWEntry(player=entry[1].player))
+                    dgw_entry: ZimowyDGW.DGWEntry = self.entries[class_name].get(entry[1].player, self.DGWEntry(player=entry[1].player))
                     if Lu >= 3:
                         entry[1].points = (Lu-entry[0]+1)*(100/Lu)
                         entry[1].comment = f"{entry[0]} na {Lu} = ({Lu}-{entry[0]}+1)*(100/{Lu}) = ({Lu - entry[0] +1}*{(100/Lu):0.3f})"
@@ -126,10 +132,23 @@ def main(args):
     import jinja2
     import os
     import logging
+    import yaml
+
+    try:
+        config = yaml.load(open(args.config, 'r'), Loader=yaml.CLoader)
+    except IOError as e:
+        print(e)
+        return
+
+    if args.league not in config['leagues']:
+        print(f"{args.league} not found in {args.config}.")
+        return
+    else:
+        league = config['leagues'].get(args.league)
 
     class HtmlHandler(logging.StreamHandler):
 
-        def __init__(self, dgw: ZimowyDGW2022):
+        def __init__(self, dgw: ZimowyDGW):
             super().__init__()
             self.dgw = dgw
 
@@ -143,13 +162,19 @@ def main(args):
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(os.path.realpath(__file__))),
                              trim_blocks=True, lstrip_blocks=True)
     template = env.get_template("dgw.template.html")
-    dgw = ZimowyDGW2022()
+    dgw = ZimowyDGW(league.get('competition_ids'), league.get('title'))
     logger.addHandler(HtmlHandler(dgw))
     dgw.reload()
-    with open('dgw.html', 'w') as f:
+    with open(f'{args.league}.ranking.html', 'w') as f:
         f.write(template.render(data=dgw))
 
 
 if __name__ == '__main__':
-    main([])
+    import argparse
+    import os
+
+    argparser = argparse.ArgumentParser()
+    argparser.add_argument('--league', '-l', type=str, required=True)
+    argparser.add_argument('--config', '-c', type=str, default=os.path.dirname(os.path.realpath(__file__)) + '/config.yaml')
+    main(argparser.parse_args())
 

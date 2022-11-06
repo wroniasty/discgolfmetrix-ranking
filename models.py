@@ -1,3 +1,8 @@
+"""models.py: Various data models used in discgolfmetrix.com API."""
+
+__author__      = "Jakub Wroniecki"
+__copyright__   = "Copyright 2022, Jakub Wroniecki, see LICENSE.txt for details."
+
 import datetime
 from typing import Dict, List, Tuple, Optional, Generator, Callable, Type, TypeVar, Any
 import itertools

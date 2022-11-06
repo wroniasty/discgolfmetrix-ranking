@@ -6,3 +6,4 @@ Jinja2==3.0.3
 MarkupSafe==2.0.1
 requests==2.27.1
 urllib3==1.26.8
+yaml

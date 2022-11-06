@@ -4,6 +4,11 @@ import datetime
 from typing import Dict
 from models import Competition, Player, Course, Track, Score, CompetitionResult
 
+"""metrix.py: Wrapper for  discgolfmetrix.com API (see https://discgolfmetrix.com/?u=rule&ID=37 )."""
+
+__author__ = "Jakub Wroniecki"
+__copyright__ = "Copyright 2022, Jakub Wroniecki, see LICENSE.txt for details."
+
 
 class MetrixAPIError(BaseException):
     pass
