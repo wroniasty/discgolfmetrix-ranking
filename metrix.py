@@ -22,12 +22,29 @@ class MetrixAPI:
         self.competitions: Dict[int, Competition] = {}
         pass
 
-    def results(self, competition_id: int):
-        result = requests.get(f'https://discgolfmetrix.com/api.php?content=result&id={competition_id}')
+    def fetch_results_json(self, competition_id: int):
+        url = f'https://discgolfmetrix.com/api.php?content=result&id={competition_id}'
+        logging.info(f"Fetching: {url}")
+        result = requests.get(url)
         reply = result.json()
+        return reply
+
+    def results(self, competition_id: int):
+        reply = self.fetch_results_json(competition_id)
         if "Competition" not in reply:
             raise MetrixAPIError(f'Missing key - "Competition" in API reply (content=result)')
+
         data = reply.get("Competition")
+        if "Events" in data and len(data.get("Events", [])) > 0 \
+                and len(data.get("SubCompetitions", [])) == 0:
+            sub_competitions = []
+            for event in data['Events']:
+                sub_event_results = self.fetch_results_json(int(event['ID']))
+                if 'Competition' not in sub_event_results:
+                    raise MetrixAPIError(f'Missing key - "Competition" in API reply for sub event ID={event["ID"]}')
+                sub_competitions.append(sub_event_results['Competition'])
+            data['SubCompetitions'] = sub_competitions
+
         competition = self.get_competition_from_json(data)
         for sub_data in data.get('SubCompetitions', []):
             sub_competition = self.get_competition_from_json(sub_data)
