@@ -32,15 +32,6 @@ class ZimowyDGW:
 
     def __init__(self, competition_ids: List[int], title=''):
         self.competition_ids = competition_ids
-        # self.competition_ids = [1963931,
-        #                         1989984,
-        #                         1995699,
-        #                         2003169,
-        #                         2004158,
-        #                         2008480,
-        #                         2014161,
-        #                         2020455,
-        #                         2025408, 2031939]
 
         self.entries = {
             "OPEN": {},
