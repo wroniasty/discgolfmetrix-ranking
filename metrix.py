@@ -1,4 +1,6 @@
 import logging
+from enum import Enum
+
 import requests
 import datetime
 from typing import Dict
@@ -16,10 +18,19 @@ class MetrixAPIError(BaseException):
 
 class MetrixAPI:
 
+    class Const(Enum):
+        IGNORE = 1
+        SET_PAR_PLUS_3 = 2
+        SET_999 = 3
+
     def __init__(self):
         self.courses: Dict[int, Course] = {}
         self.players: Dict[int, Player] = {}
         self.competitions: Dict[int, Competition] = {}
+
+        self.on_score_missing = MetrixAPI.Const.SET_PAR_PLUS_3
+        self.on_round_missing = MetrixAPI.Const.SET_999
+
         pass
 
     def fetch_results_json(self, competition_id: int):
@@ -85,11 +96,16 @@ class MetrixAPI:
                     comp_result.valid = False
 
                 if len(list(plresult for plresult in result['PlayerResults'] if isinstance(plresult, dict) and "Result" in plresult)) == 0:
-                    logging.error(f"[{competition.id}] {competition.name} - {comp_result.player.name}: "
-                                  f"Brak wyników rundy (używam 999).")
                     comp_result.valid = False
-                    score = Score(result=999, diff=999 - competition.par)
-                    comp_result.scores.append(score)
+                    if self.on_round_missing == MetrixAPI.Const.SET_999:
+                        logging.warning(f"[{competition.id}] {competition.name} - {comp_result.player.name}: "
+                                      f"Brak wyników rundy (używam 999).")
+                        score = Score(result=999, diff=999 - competition.par)
+                        comp_result.scores.append(score)
+                    else:
+                        logging.warning(f"[{competition.id}] {competition.name} - {comp_result.player.name}: "
+                                      f"Brak wyników rundy (odrzucam).")
+
                     round_missing = True
 
                 if not round_missing:
@@ -99,18 +115,23 @@ class MetrixAPI:
                                 result=int(plresult['Result']),
                                 diff=int(plresult["Diff"])
                             )
-                        else:
+                        elif self.on_score_missing == MetrixAPI.Const.SET_PAR_PLUS_3:
                             score = Score(
                                 result=competition.tracks[track_idx].par + 3,
                                 diff=3
                             )
-                            logging.error(f"[{competition.id}] {competition.name} - {comp_result.player.name}: "
+                            logging.warning(f"[{competition.id}] {competition.name} - {comp_result.player.name}: "
                                           f"Brak wyniku - dołek nr {track_idx+1} - używam par+3 == {score.result}.")
+                        else:
+                            logging.warning(f"[{competition.id}] {competition.name} - {comp_result.player.name}: "
+                                          f"Brak wyniku - dołek nr {track_idx+1} - odrzucam wynik.")
+                            score = Score(result=0, diff=0)
+
                         if score.result > 0:
                             comp_result.scores.append(score)
 
                 if comp_result.submitted_sum != comp_result.sum and comp_result.valid:
-                    logging.error(f"[{competition.id}] {competition.name} - {comp_result.player.name}: "
+                    logging.warning(f"[{competition.id}] {competition.name} - {comp_result.player.name}: "
                                   f"Podany wynik {comp_result.submitted_sum} niezgodny z obliczonym == {comp_result.sum}")
 
                 # if len(comp_result.scores) < len(competition.tracks):
@@ -121,30 +142,27 @@ class MetrixAPI:
                 if result.get('DNF') not in (None, "0"):
                     comp_result.valid = False
 
-
                 competition.results.append(comp_result)
 
             except TypeError as e:
-                logging.error(f"Error processing {competition.id} [{competition.name}] {result}", exc_info=e)
-
-
+                logging.warning(f"Error processing {competition.id} [{competition.name}] {result}", exc_info=e)
 
         return competition
 
-    def get_course(self, id, **params) -> Course:
-        if id not in self.courses:
-            self.courses[id] = Course(id=id, **params)
-        return self.courses[id]
+    def get_course(self, course_id, **params) -> Course:
+        if course_id not in self.courses:
+            self.courses[course_id] = Course(id=course_id, **params)
+        return self.courses[course_id]
 
-    def get_player(self, id, **params) -> Player:
-        if id not in self.players:
-            self.players[id] = Player(id=id, **params)
-        return self.players[id]
+    def get_player(self, player_id, **params) -> Player:
+        if player_id not in self.players:
+            self.players[player_id] = Player(id=player_id, **params)
+        return self.players[player_id]
 
-    def has_player(self, id) -> bool:
-        return id in self.players
+    def has_player(self, player_id) -> bool:
+        return player_id in self.players
 
-    def get_competition(self, id, **params) -> Competition:
-        if id not in self.competitions:
-            self.competitions[id] = Competition(id=id, **params)
-        return self.competitions[id]
+    def get_competition(self, competition_id, **params) -> Competition:
+        if competition_id not in self.competitions:
+            self.competitions[competition_id] = Competition(id=competition_id, **params)
+        return self.competitions[competition_id]
