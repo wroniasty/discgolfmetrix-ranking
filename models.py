@@ -1,7 +1,7 @@
 """models.py: Various data models used in discgolfmetrix.com API."""
 
-__author__      = "Jakub Wroniecki"
-__copyright__   = "Copyright 2022, Jakub Wroniecki, see LICENSE.txt for details."
+__author__ = "Jakub Wroniecki"
+__copyright__ = "Copyright 2022, Jakub Wroniecki, see LICENSE.txt for details."
 
 import datetime
 from typing import Dict, List, Tuple, Optional, Generator, Callable, Type, TypeVar, Any
@@ -13,6 +13,9 @@ from dataclasses import dataclass, field, asdict
 class Player:
     id: int
     name: str
+
+    pdga_id: int = None
+    pdga_rating: int = None
 
     def __hash__(self):
         return hash(self.id)
@@ -31,6 +34,7 @@ class Course:
 class Score:
     result: int
     diff: int
+
 
 @dataclass
 class RankingEntry:
@@ -53,10 +57,12 @@ class RankingEntry:
     def calculated_diff(self):
         return sum(s.diff for s in self.scores)
 
+
 @dataclass
 class RankingList:
     name: str
     entries: List[Tuple[int, RankingEntry]] = field(default_factory=list)
+
 
 @dataclass
 class CompetitionResult:
@@ -82,6 +88,7 @@ class CompetitionResult:
         self.submitted_diff += other.submitted_diff
         self.scores += other.scores
         return self
+
 
 @dataclass
 class Track:
