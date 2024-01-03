@@ -166,6 +166,7 @@ if __name__ == '__main__':
 
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--league', '-l', type=str, required=True)
-    argparser.add_argument('--config', '-c', type=str, default=os.path.dirname(os.path.realpath(__file__)) + '/config.yaml')
+    argparser.add_argument('--config', '-c', type=str,
+                           default=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.yaml'))
     main(argparser.parse_args())
 
