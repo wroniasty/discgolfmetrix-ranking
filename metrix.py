@@ -1,7 +1,10 @@
 import logging
+import os.path
+
 import requests
 import datetime
 from typing import Dict
+import pickle
 from models import Competition, Player, Course, Track, Score, CompetitionResult
 
 """metrix.py: Wrapper for  discgolfmetrix.com API (see https://discgolfmetrix.com/?u=rule&ID=37 )."""
@@ -16,18 +19,63 @@ class MetrixAPIError(BaseException):
 
 class MetrixAPI:
 
-    def __init__(self):
+    def __init__(self, cache_file=None):
         self.courses: Dict[int, Course] = {}
         self.players: Dict[int, Player] = {}
         self.competitions: Dict[int, Competition] = {}
-        pass
+        self._cache_file = None
+        self.cache = {
+            'competitions': {},
+            'players': [],
+            'ratings': {}
+        }
+
+        if cache_file is not None:
+            self._cache_file = cache_file
+        print(self._cache_file)
+
+        self.load_cache()
+
+    def load_cache(self):
+        if self._cache_file is not None and os.path.isfile(self._cache_file):
+            with open(self._cache_file, 'rb') as f:
+                self.cache = pickle.load(f)
+
+            if 'ratings' not in self.cache:
+                self.cache['ratings'] = {}
+            if 'competitions' not in self.cache:
+                self.cache['competitions'] = {}
+            if 'players' not in self.cache:
+                self.cache['players'] = []
+
+            for p in self.cache['players']:
+                self.players[p.id] = p
+                self.players[hash(p.name.upper())] = p
+
+    def save_cache(self):
+        players_set = set()
+        for p in self.players.values():
+            players_set.add(p)
+        self.cache['players'] = list(sorted(players_set, key = lambda p: p.name))
+
+        for c in self.competitions.values():
+            for c_sub in c.sub:
+                self.cache['ratings'][c_sub.id] = {r.player.id: r.rating for r in c_sub.results}
+
+        if self._cache_file is not None:
+            with open(self._cache_file, 'wb') as f:
+                pickle.dump(self.cache, f)
 
     def fetch_results_json(self, competition_id: int):
-        url = f'https://discgolfmetrix.com/api.php?content=result&id={competition_id}'
-        logging.info(f"Fetching: {url}")
-        result = requests.get(url)
-        reply = result.json()
-        return reply
+
+        if competition_id not in self.cache['competitions']:
+            url = f'https://discgolfmetrix.com/api.php?content=result&id={competition_id}'
+            logging.info(f"Fetching: {url}")
+            result = requests.get(url)
+            reply = result.json()
+            self.cache['competitions'][competition_id] = reply
+
+        return self.cache['competitions'][competition_id]
 
     def results(self, competition_id: int):
         reply = self.fetch_results_json(competition_id)
@@ -76,7 +124,8 @@ class MetrixAPI:
                     class_name=result['ClassName'],
                     order_number=int(result['OrderNumber'] or 0),
                     submitted_sum=int(result['Sum']),
-                    submitted_diff=int(result['Diff'])
+                    submitted_diff=int(result['Diff']),
+                    rating=self.cache['ratings'].get(competition.id, {}).get(int(result['UserID'] or hash(result['Name'].upper())), None)
                 )
                 self.players[hash_id] = comp_result.player
                 round_missing = False
