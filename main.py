@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
 from typing import Dict, List
+import logging
 
 from models import RankingEntry, Competition, Player
 from metrix import MetrixAPI
@@ -30,7 +31,7 @@ class ZimowyDGW:
         def __hash__(self):
             return hash(self.player)
 
-    def __init__(self, competition_ids: List[int], title=''):
+    def __init__(self, competition_ids: List[int], title='', cache_file=None):
         self.competition_ids = competition_ids
 
         self.entries = {
@@ -53,8 +54,11 @@ class ZimowyDGW:
         self.errors: List[str] = []
         self.title = title
 
+        self.cache_file = cache_file
+        self.api = MetrixAPI(cache_file=self.cache_file)
+
     def reload(self) -> List[Competition]:
-        api = MetrixAPI()
+        api = self.api
         data: List[Competition] = []
 
         for competition_id in self.competition_ids:
@@ -104,7 +108,7 @@ class ZimowyDGW:
                     self.entries[class_name][entry[1].player] = dgw_entry
 
         for class_name, entries in self.entries.items():
-            print(f"Ranking: {class_name}")
+            logging.info(f"Generating ranking: {class_name}")
             self.entries_sorted[class_name] = list(sorted(entries.values(), key=lambda e: -e.best(7)))
             place = 0
             count = 1
@@ -122,8 +126,9 @@ class ZimowyDGW:
 def main(args):
     import jinja2
     import os
-    import logging
     import yaml
+    import rating
+    from rich.logging import RichHandler
 
     try:
         config = yaml.load(open(args.config, 'r'), Loader=yaml.CLoader)
@@ -147,17 +152,28 @@ def main(args):
             self.dgw.errors.append(self.format(record))
 
     logger = logging.getLogger()
-    logger.addHandler(logging.StreamHandler())
+    logger.setLevel(logging.INFO)
+    logger.addHandler(RichHandler())
 
-    print(os.path.realpath(__file__))
     env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(os.path.realpath(__file__))),
                              trim_blocks=True, lstrip_blocks=True)
     template = env.get_template("dgw.template.html")
-    dgw = ZimowyDGW(league.get('competition_ids'), league.get('title'))
+    dgw = ZimowyDGW(league.get('competition_ids'), league.get('title'), cache_file=args.cache_file)
     logger.addHandler(HtmlHandler(dgw))
     dgw.reload()
-    with open(f'{args.league}.ranking.html', 'w') as f:
-        f.write(template.render(data=dgw))
+
+
+    for comp in dgw.api.competitions.values():
+        for round in comp.sub:
+            rating.calculate_round_rating(dgw.api, round, plotting=True,
+                                          outlier_fraction=config.get("rating", {}).get("outlier_fraction", 0.25),
+                                          prop_min_rating=config.get("rating", {}).get("prop_min_rating", 500))
+
+    dgw.api.save_cache()
+
+    with open(f'{args.league}.ranking.html', 'w', encoding='utf-8') as f:
+        f.write(template.render(data=dgw, ratings=dgw.api.cache['ratings']))
+
 
 
 if __name__ == '__main__':
@@ -167,6 +183,11 @@ if __name__ == '__main__':
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--league', '-l', type=str, required=True)
     argparser.add_argument('--config', '-c', type=str,
-                           default=os.path.join(os.path.dirname(os.path.realpath(__file__)), 'config.yaml'))
+                           default=os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                                'config.yaml'))
+    argparser.add_argument('--cache-file', type=str,
+                           default=os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                                'results.cache.pkl')
+                           )
     main(argparser.parse_args())
 
