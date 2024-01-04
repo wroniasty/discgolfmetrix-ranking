@@ -1,0 +1,21 @@
+Screen {
+    align: center middle;
+    padding: 0;
+}
+
+#buttons {
+    height: 3;
+    width: auto;
+}
+
+ContentSwitcher {
+    background: $panel;
+    border: round $primary;
+    width: 100%;
+    height: 100%;
+}
+
+DataTable {
+    background: $panel;
+}
+
