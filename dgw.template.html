@@ -160,7 +160,7 @@
                        {% else %}
                            <td><span class="text-primary">{{e.results[c.id].place}}</span></td>
                            <td><i>{{ e.results[c.id].comment }}</i></td>
-                           <td>= <strong>{{ '{0:0.3f}'.format(e.results[c.id].points) }}</strong></td>
+                           <td><strong>{{ '{0:0.3f}'.format(e.results[c.id].points) }}</strong></td>
                            <td>{{ 'TAK' if e.results[c.id].selected else 'NIE' }}</td>
                        {% endif %}
                    {% else %}
@@ -190,6 +190,26 @@
                       <h3>{{e.place}}</h3>
                   </td>
               </tr>
+          </table>
+
+          <h3>Rating</h3>
+          <table class="table table-hover">
+              <thead>
+                <tr>
+                    <th>Runda</th>
+                    <th>Rating</th>
+                </tr>
+              </thead>
+           {% for c in data.competitions %}
+              {% for cs in c.sub %}
+                 {% if c.id in e.results %}
+                      <tr>
+                          <td>{{ cs.name }}</td>
+                          <td><b>{{ratings[cs.id][e.player.id]}}</b></td>
+                      </tr>
+                 {% endif %}
+              {% endfor %}
+            {% endfor %}
           </table>
       </div>
       <div class="modal-footer">
