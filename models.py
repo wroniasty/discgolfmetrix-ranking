@@ -75,6 +75,8 @@ class CompetitionResult:
     submitted_diff: int = None
     valid: bool = True
 
+    rating: int = None
+
     @property
     def sum(self):
         return sum(s.result for s in self.scores)
