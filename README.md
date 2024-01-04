@@ -5,7 +5,7 @@ This utility generates disc golf rankings based on competition results retrieved
 ### Zimowy Puchar DGW
 
 Żeby wygenerować nowy ranking w stylu Zimowej Ligi DGW:
- - zainstaluj w miarę nową wersję Pythona (>= 3.8),
+ - zainstaluj w miarę nową wersję Pythona (>= 3.10),
  - sklonuj to repozytorium,
  - zainstaluj wymagane biblioteki z ``requirements.txt``,
  - dodaj nową pozycję do pliku "config.yaml" pod kluczem **leagues** (np. DGW2024),
