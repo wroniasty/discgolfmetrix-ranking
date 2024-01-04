@@ -21,3 +21,35 @@ def get_player_rating(player_id: int) -> tuple[int | None, str | None]:
 
     return rating, name
 
+
+# search for player by name on the pdga website and return the first result
+# returns a tuple of (player_id, player_rating)
+# if player is not found, returns (None, None)
+def search_player(player_name: str) -> Tuple[int | None, int | None]:
+    fn, ln = player_name.split(' ')[:2]
+    params = {
+        "FirstName": fn,
+        "LastName": ln,
+        "PDGANum": "",
+        "Status": "All",
+        "Gender":  "All",
+        "Class": "All",
+        "MemberType": "All",
+        "City": "",
+        "StateProv": "All",
+        "Country": "All",
+        "Country_1": "All",
+        "UpdateDate": ""
+    }
+    url = f'https://pdga.com/players'
+    result = requests.get(url, params=params)
+    soup = bs(result.content, 'html.parser')
+    try:
+        player_id = soup.find('td', {'class': 'views-field-PDGANum'}).text
+        rating = soup.find('td', {'class': 'views-field-Rating-1'}).text
+        if not rating.isnumeric():
+            rating = "0"
+
+        return int(player_id), int(rating)
+    except AttributeError:
+        return None, None
