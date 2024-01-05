@@ -139,8 +139,15 @@ class ZimowyDGW:
         template = env.get_template("dgw.template.html")
         html_file = f'{filename}'
         logging.info(f"Generating HTML -> {html_file}.")
+        all_results = []
+        for c in self.competitions:
+            for s in c.sub:
+                all_results.extend(s.results)
+        all_results = list(sorted(all_results, key=lambda r: r.rating or 0, reverse=True))
+        logging.info(f"Results: {len(all_results)}")
+        top_results = all_results[:50]
         with open(f'{html_file}', 'w', encoding='utf-8') as f:
-            f.write(template.render(data=self, ratings=self.api.cache['ratings']))
+            f.write(template.render(data=self, ratings=self.api.cache['ratings'], top_rounds=top_results))
 
 
 class DgwHtmlHandler(logging.StreamHandler):

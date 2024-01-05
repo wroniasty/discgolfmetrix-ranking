@@ -85,6 +85,10 @@ class CompetitionResult:
     def diff(self):
         return sum(s.diff for s in self.scores)
 
+    @property
+    def rating_or_zero(self):
+        return self.rating or 0
+
     def __iadd__(self, other: 'CompetitionResult'):
         self.submitted_sum += other.submitted_sum
         self.submitted_diff += other.submitted_diff
