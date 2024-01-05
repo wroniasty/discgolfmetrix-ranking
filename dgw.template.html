@@ -205,7 +205,11 @@
                  {% if c.id in e.results %}
                       <tr>
                           <td>{{ cs.name }}</td>
-                          <td><b>{{ratings[cs.id][e.player.id]}}</b></td>
+                          {% if cs.id in ratings and e.player.id in ratings[cs.id] %}
+                              <td><b>{{ratings[cs.id][e.player.id]}}</b></td>
+                          {% else %}
+                              <td><i>Brak</i></td>
+                          {% endif %}
                       </tr>
                  {% endif %}
               {% endfor %}

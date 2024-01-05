@@ -8,14 +8,17 @@ Screen {
     width: auto;
 }
 
-ContentSwitcher {
+TabPane {
     background: $panel;
     border: round $primary;
     width: 100%;
-    height: 100%;
+    height: 1fr;
+    padding: 0;
 }
+
 
 DataTable {
     background: $panel;
+    height: 1fr;
 }
 

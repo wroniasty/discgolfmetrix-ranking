@@ -1,126 +1,10 @@
-from dataclasses import dataclass, field
-from typing import Dict, List
 import logging
-
-from models import RankingEntry, Competition, Player
-from metrix import MetrixAPI
+from dgw import ZimowyDGW, DgwHtmlHandler
 
 """main.py: Generator rankingu Zimowej Ligi DGW."""
 
 __author__ = "Jakub Wroniecki"
 __copyright__ = "Copyright 2022, Jakub Wroniecki, see LICENSE.txt for details."
-
-class ZimowyDGW:
-
-    @dataclass
-    class DGWEntry:
-        player: Player
-        results: Dict[int, RankingEntry] = field(default_factory=dict)
-        sum: int = 0
-        place: int = None
-
-        def best(self, count):
-            for s in self.results.values():
-                s.selected = False
-            selected = sorted(self.results.values(), key=lambda r: 0 if r.dqf else -r.points)[:count]
-            for s in selected:
-                s.selected = True
-            self.sum = sum(0 if s.dqf else s.points for s in selected)
-            return self.sum
-
-        def __hash__(self):
-            return hash(self.player)
-
-    def __init__(self, competition_ids: List[int], title='', cache_file=None):
-        self.competition_ids = competition_ids
-
-        self.entries = {
-            "OPEN": {},
-            "WOMEN": {},
-            "MASTERS": {},
-            "JUNIOR": {}
-        }
-
-        self.entries_sorted: Dict[str, List[ZimowyDGW.DGWEntry]] = {}
-
-        self.rankings = {
-            "OPEN": {},
-            "WOMEN": {},
-            "MASTERS": {},
-            "JUNIOR": {}
-        }
-        self.competitions: List[Competition] = []
-
-        self.errors: List[str] = []
-        self.title = title
-
-        self.cache_file = cache_file
-        self.api = MetrixAPI(cache_file=self.cache_file)
-
-    def reload(self) -> List[Competition]:
-        api = self.api
-        data: List[Competition] = []
-
-        for competition_id in self.competition_ids:
-            data.append(api.results(competition_id))
-
-        for competition in data:
-            self.competitions.append(competition)
-            rankings = {}
-            for class_name, ranking in competition.ranking:
-                class_name = class_name.upper()
-                if "MASTER" in class_name:
-                    real_class_name = "MASTERS"
-                elif "WOMEN" in class_name:
-                    real_class_name = "WOMEN"
-                elif "JUNIOR" in class_name:
-                    real_class_name = "JUNIOR"
-                else:
-                    real_class_name = "OPEN"
-                rankings[real_class_name] = ranking
-
-            if "OPEN" not in rankings:
-                continue
-
-            LuOpen = len(list(e for e in rankings["OPEN"].entries if not e[1].dqf))
-
-            for class_name, ranking in rankings.items():
-                Lu = len(list(e for e in ranking.entries if not e[1].dqf))
-                if Lu < 3:
-                    filler_ranking = rankings["OPEN"].entries[:]
-                    filler_ranking.extend(ranking.entries)
-
-                for entry in ranking.entries:
-                    dgw_entry: ZimowyDGW.DGWEntry = self.entries[class_name].get(entry[1].player, self.DGWEntry(player=entry[1].player))
-                    if Lu >= 3:
-                        entry[1].points = (Lu-entry[0]+1)*(100/Lu)
-                        entry[1].comment = f"{entry[0]} na {Lu} = ({Lu}-{entry[0]}+1)*(100/{Lu}) = ({Lu - entry[0] +1}*{(100/Lu):0.3f})"
-                    else:
-                        M = 1
-                        for m, re in rankings["OPEN"].entries:
-                            if re.sum < entry[1].sum:
-                                M = M + 1
-                            else:
-                                break
-                        entry[1].comment = f"(OPEN) {M} na {LuOpen+1} = ({LuOpen + 1}-{entry[0]}+1)*(100/{Lu}) = ({LuOpen + 1 - entry[0]+1}*{(100/(LuOpen+1)):0.2f}) "
-                        entry[1].points = (LuOpen + 1 - M + 1)*(100/(LuOpen+1))
-                    dgw_entry.results[competition.id] = entry[1]
-                    self.entries[class_name][entry[1].player] = dgw_entry
-
-        for class_name, entries in self.entries.items():
-            logging.info(f"Generating ranking: {class_name}")
-            self.entries_sorted[class_name] = list(sorted(entries.values(), key=lambda e: -e.best(7)))
-            place = 0
-            count = 1
-            previous_points = 1e24
-            for e in self.entries_sorted[class_name]:
-                if e.sum < previous_points:
-                    place = count
-                    previous_points = e.sum
-                e.place = place
-                count = count + 1
-
-        return data
 
 
 def main(args):
@@ -129,11 +13,15 @@ def main(args):
     import yaml
     import rating
     from rich.logging import RichHandler
+    from pprint import pprint
+
+    logger = logging.getLogger()
+    logger.addHandler(RichHandler())
 
     try:
         config = yaml.load(open(args.config, 'r'), Loader=yaml.CLoader)
     except IOError as e:
-        print(e)
+        logging.exception(f"Loading config file '{args.config}' failed.")
         return
 
     if args.league not in config['leagues']:
@@ -142,38 +30,45 @@ def main(args):
     else:
         league = config['leagues'].get(args.league)
 
-    class HtmlHandler(logging.StreamHandler):
 
-        def __init__(self, dgw: ZimowyDGW):
-            super().__init__()
-            self.dgw = dgw
 
-        def emit(self, record: logging.LogRecord):
-            self.dgw.errors.append(self.format(record))
+    if args.quiet > 0:
+        logger.setLevel(logging.ERROR)
+    elif args.verbose > 0:
+        logger.setLevel(logging.DEBUG)
+    else:
+        logger.setLevel(logging.INFO)
 
-    logger = logging.getLogger()
-    logger.setLevel(logging.INFO)
-    logger.addHandler(RichHandler())
-
-    env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(os.path.realpath(__file__))),
-                             trim_blocks=True, lstrip_blocks=True)
-    template = env.get_template("dgw.template.html")
+    # env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(os.path.realpath(__file__))),
+    #                          trim_blocks=True, lstrip_blocks=True)
+    # template = env.get_template("dgw.template.html")
     dgw = ZimowyDGW(league.get('competition_ids'), league.get('title'), cache_file=args.cache_file)
-    logger.addHandler(HtmlHandler(dgw))
+    logger.addHandler(DgwHtmlHandler(dgw))
     dgw.reload()
 
-
-    for comp in dgw.api.competitions.values():
-        for round in comp.sub:
-            rating.calculate_round_rating(dgw.api, round, plotting=True,
-                                          outlier_fraction=config.get("rating", {}).get("outlier_fraction", 0.25),
-                                          prop_min_rating=config.get("rating", {}).get("prop_min_rating", 500))
+    if not args.skip_ratings:
+        player_lookup = {
+            player.id: player.pdga_rating for player in dgw.api.players.values() if (player.pdga_rating or 0) > 0
+        }
+        for comp in dgw.api.competitions.values():
+            for sub_comp in comp.sub:
+                if any(r.rating is not None for r in sub_comp.results) and not args.force_ratings:
+                    logging.warning(f"Skipping calculating ratings for {comp.name}, already in cache.")
+                else:
+                    rating.calculate_round_rating(sub_comp, player_lookup, plotting=True,
+                                                  outlier_fraction=config.get("rating", {}).get("outlier_fraction", 0.25),
+                                                  prop_min_rating=config.get("rating", {}).get("prop_min_rating", 500))
+    else:
+        logging.info("Skipping ratings calculation.")
 
     dgw.api.save_cache()
 
-    with open(f'{args.league}.ranking.html', 'w', encoding='utf-8') as f:
-        f.write(template.render(data=dgw, ratings=dgw.api.cache['ratings']))
+    html_file = f'{args.league}.ranking.html'
+    dgw.render_ranking(html_file)
 
+    # logging.info(f"Generating HTML -> {html_file}.")
+    # with open(f'{html_file}', 'w', encoding='utf-8') as f:
+    #     f.write(template.render(data=dgw, ratings=dgw.api.cache['ratings']))
 
 
 if __name__ == '__main__':
@@ -182,12 +77,16 @@ if __name__ == '__main__':
 
     argparser = argparse.ArgumentParser()
     argparser.add_argument('--league', '-l', type=str, required=True)
+    argparser.add_argument('--skip-ratings', action='store_true')
+    argparser.add_argument('--force-ratings', action='store_true', help="Force ratings calculation, ignore cached values.")
     argparser.add_argument('--config', '-c', type=str,
                            default=os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                                 'config.yaml'))
     argparser.add_argument('--cache-file', type=str,
                            default=os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                                'results.cache.pkl')
-                           )
+                                                'results.cache.pkl'))
+    argparser.add_argument('-v', action="count", dest="verbose", default=0)
+    argparser.add_argument('--quiet', '-q', action="store_const", const=True, default=False)
+
     main(argparser.parse_args())
 
