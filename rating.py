@@ -1,25 +1,21 @@
-from typing import List
+from typing import List, Dict
 from scipy import stats
 from matplotlib import pylab
 from metrix import MetrixAPI
 from models import CompetitionResult, Competition
 import logging
 
-"""rating.py: Generator ratingu Zimowej Ligi DGW."""
+"""rating.py: Kalkulator ratingu Zimowej Ligi DGW."""
 
 __author__ = "Bartosz Wilczynski"
 __copyright__ = "Copyright 2024, Bartosz Wilczynski, see LICENSE.txt for details."
 
 
-def calculate_round_rating(api: MetrixAPI, competition: Competition, plotting=False,
+def calculate_round_rating(competition: Competition, player_lookup: Dict[int, int], plotting=False,
                            outlier_fraction=0.25, prop_min_rating=500):
     scores = []
     ratings = []
     logging.info(f"Processing round {competition.name} #{competition.id} par {competition.par}")
-
-    player_lookup = {
-        player.id: player.pdga_rating for player in api.players.values() if (player.pdga_rating or 0) > 0
-    }
 
     par = competition.par
     propagators_count = 0
@@ -33,6 +29,9 @@ def calculate_round_rating(api: MetrixAPI, competition: Competition, plotting=Fa
                 propagators_count += 1
 
     logging.info(f"Available propagators {propagators_count} of {len(competition.results)}")
+    if propagators_count < 3:
+        logging.warning(f"Too few propagators for {competition.name} #{competition.id} - skipping.")
+        return
 
     # first approx fit
     lr = stats.linregress(ratings, scores)
@@ -60,6 +59,10 @@ def calculate_round_rating(api: MetrixAPI, competition: Competition, plotting=Fa
 
     logging.info(
         f"Robust round par score {rating_calc_new(par)} diff per stroke {-1 / lr_new.slope} r-val {lr_new.rvalue}")
+
+    competition.rating_par = rating_calc_new(par)
+    competition.rating_propagators = propagators_count
+    competition.rating_per_stroke = -1 / lr_new.slope
 
     # apply the robust ranking to the players' results
     for result in competition.results:

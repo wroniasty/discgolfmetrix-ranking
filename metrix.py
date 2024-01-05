@@ -23,16 +23,17 @@ class MetrixAPI:
         self.courses: Dict[int, Course] = {}
         self.players: Dict[int, Player] = {}
         self.competitions: Dict[int, Competition] = {}
+        self.sub_competitions: Dict[int, Competition] = {}
         self._cache_file = None
         self.cache = {
             'competitions': {},
             'players': [],
-            'ratings': {}
+            'ratings': {},
+            'ratings_info': {},
         }
 
         if cache_file is not None:
             self._cache_file = cache_file
-        print(self._cache_file)
 
         self.load_cache()
 
@@ -43,6 +44,8 @@ class MetrixAPI:
 
             if 'ratings' not in self.cache:
                 self.cache['ratings'] = {}
+            if 'ratings_info' not in self.cache:
+                self.cache['ratings_info'] = {}
             if 'competitions' not in self.cache:
                 self.cache['competitions'] = {}
             if 'players' not in self.cache:
@@ -56,11 +59,20 @@ class MetrixAPI:
         players_set = set()
         for p in self.players.values():
             players_set.add(p)
-        self.cache['players'] = list(sorted(players_set, key = lambda p: p.name))
+        self.cache['players'] = list(sorted(players_set, key=lambda p: p.name))
 
         for c in self.competitions.values():
             for c_sub in c.sub:
-                self.cache['ratings'][c_sub.id] = {r.player.id: r.rating for r in c_sub.results}
+                if any(r.rating is not None for r in c_sub.results):
+                    self.cache['ratings'][c_sub.id] = {r.player.id: r.rating for r in c_sub.results}
+                    self.cache['ratings_info'][c_sub.id] = {
+                        "rating_par": c_sub.rating_par,
+                        "rating_propagators": c_sub.rating_propagators,
+                        "rating_per_stroke": c_sub.rating_per_stroke,
+                    }
+                else:
+                    self.cache['ratings'].pop(c_sub.id, None)
+                    self.cache['ratings_info'].pop(c_sub.id, None)
 
         if self._cache_file is not None:
             with open(self._cache_file, 'wb') as f:
@@ -85,6 +97,7 @@ class MetrixAPI:
         data = reply.get("Competition")
         if "Events" in data and len(data.get("Events", [])) > 0 \
                 and len(data.get("SubCompetitions", [])) == 0:
+
             sub_competitions = []
             for event in data['Events']:
                 sub_event_results = self.fetch_results_json(int(event['ID']))
@@ -98,6 +111,7 @@ class MetrixAPI:
             sub_competition = self.get_competition_from_json(sub_data)
             competition.sub.append(sub_competition)
             sub_competition.parent = competition
+            self.sub_competitions[sub_competition.id] = sub_competition
 
         # print(data["SubCompetitions"])
         # print(competition)
@@ -112,6 +126,13 @@ class MetrixAPI:
         for track in data['Tracks']:
             competition.tracks.append(Track(number=int(track['Number']), par=int(track['Par']),
                                             number_alt=track['NumberAlt']))
+
+        competition.rating_par = self.cache['ratings_info'].get(competition.id, {}).get('rating_par', None)
+        competition.rating_propagators = self.cache['ratings_info'].get(competition.id, {}).get('rating_propagators',
+                                                                                                None)
+        competition.rating_per_stroke = self.cache['ratings_info'].get(competition.id, {}).get('rating_per_stroke',
+                                                                                               None)
+
         for result in data['Results']:
             try:
                 hash_id = hash(result['Name'].upper())
@@ -125,7 +146,8 @@ class MetrixAPI:
                     order_number=int(result['OrderNumber'] or 0),
                     submitted_sum=int(result['Sum']),
                     submitted_diff=int(result['Diff']),
-                    rating=self.cache['ratings'].get(competition.id, {}).get(int(result['UserID'] or hash(result['Name'].upper())), None)
+                    rating=self.cache['ratings'].get(competition.id, {}).get(
+                        int(result['UserID'] or hash(result['Name'].upper())), None)
                 )
                 self.players[hash_id] = comp_result.player
                 round_missing = False
@@ -133,9 +155,10 @@ class MetrixAPI:
                 if result.get('DNF') not in (None, "0"):
                     comp_result.valid = False
 
-                if len(list(plresult for plresult in result['PlayerResults'] if isinstance(plresult, dict) and "Result" in plresult)) == 0:
-                    logging.error(f"[{competition.id}] {competition.name} - {comp_result.player.name}: "
-                                  f"Brak wyników rundy (używam 999).")
+                if len(list(plresult for plresult in result['PlayerResults'] if
+                            isinstance(plresult, dict) and "Result" in plresult)) == 0:
+                    logging.warning(f"[{competition.id}] {competition.name} - {comp_result.player.name}: "
+                                    f"Brak wyników rundy (używam 999).")
                     comp_result.valid = False
                     score = Score(result=999, diff=999 - competition.par)
                     comp_result.scores.append(score)
@@ -153,14 +176,14 @@ class MetrixAPI:
                                 result=competition.tracks[track_idx].par + 3,
                                 diff=3
                             )
-                            logging.error(f"[{competition.id}] {competition.name} - {comp_result.player.name}: "
-                                          f"Brak wyniku - dołek nr {track_idx+1} - używam par+3 == {score.result}.")
+                            logging.warning(f"[{competition.id}] {competition.name} - {comp_result.player.name}: "
+                                            f"Brak wyniku - dołek nr {track_idx + 1} - używam par+3 == {score.result}.")
                         if score.result > 0:
                             comp_result.scores.append(score)
 
                 if comp_result.submitted_sum != comp_result.sum and comp_result.valid:
-                    logging.error(f"[{competition.id}] {competition.name} - {comp_result.player.name}: "
-                                  f"Podany wynik {comp_result.submitted_sum} niezgodny z obliczonym == {comp_result.sum}")
+                    logging.warning(f"[{competition.id}] {competition.name} - {comp_result.player.name}: "
+                                    f"Podany wynik {comp_result.submitted_sum} niezgodny z obliczonym == {comp_result.sum}")
 
                 # if len(comp_result.scores) < len(competition.tracks):
                 #     logging.error(f"Ejecting result for {comp_result.player.name} in {competition.name} - invalid number of results "
@@ -170,13 +193,10 @@ class MetrixAPI:
                 if result.get('DNF') not in (None, "0"):
                     comp_result.valid = False
 
-
                 competition.results.append(comp_result)
 
             except TypeError as e:
                 logging.error(f"Error processing {competition.id} [{competition.name}] {result}", exc_info=e)
-
-
 
         return competition
 

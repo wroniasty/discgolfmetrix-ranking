@@ -75,7 +75,7 @@ class CompetitionResult:
     submitted_diff: int = None
     valid: bool = True
 
-    rating: int = None
+    rating: Optional[int] = None
 
     @property
     def sum(self):
@@ -111,6 +111,10 @@ class Competition:
 
     tracks: List[Track] = field(default_factory=list)
     results: List[CompetitionResult] = field(default_factory=list)
+
+    rating_par: int = None
+    rating_propagators: int = 0
+    rating_per_stroke: float = 0
 
     @property
     def par(self):
