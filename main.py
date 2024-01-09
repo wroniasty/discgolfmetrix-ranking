@@ -65,6 +65,8 @@ def main(args):
 
     html_file = f'{args.league}.ranking.html'
     dgw.render_ranking(html_file)
+    html_file = f'{args.league}.rating.html'
+    dgw.render_rating(html_file)
 
     # logging.info(f"Generating HTML -> {html_file}.")
     # with open(f'{html_file}', 'w', encoding='utf-8') as f:

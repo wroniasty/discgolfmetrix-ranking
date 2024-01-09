@@ -126,17 +126,25 @@ class ZimowyDGW:
         return data
 
     def render_ranking(self, filename: str):
-        # league = config['leagues'].get(league_id)
-        # #dgw = ZimowyDGW(league.get('competition_ids'), league.get('title'), cache_file=cache_file)
-        # logger = logging.getLogger()
-        # handler = DgwHtmlHandler(self)
-        # logger.addHandler(handler)
-        # self.reload()
-        # logger.removeHandler(handler)
-
         env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(os.path.realpath(__file__))),
                                  trim_blocks=True, lstrip_blocks=True)
         template = env.get_template("dgw.template.html")
+        html_file = f'{filename}'
+        logging.info(f"Generating HTML -> {html_file}.")
+        all_results = []
+        for c in self.competitions:
+            for s in c.sub:
+                all_results.extend(s.results)
+        all_results = list(sorted(all_results, key=lambda r: r.rating or 0, reverse=True))
+        logging.info(f"Results: {len(all_results)}")
+        top_results = all_results[:50]
+        with open(f'{html_file}', 'w', encoding='utf-8') as f:
+            f.write(template.render(data=self, ratings=self.api.cache['ratings'], top_rounds=top_results))
+
+    def render_rating(self, filename: str):
+        env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(os.path.realpath(__file__))),
+                                 trim_blocks=True, lstrip_blocks=True)
+        template = env.get_template("dgw.rating.template.html")
         html_file = f'{filename}'
         logging.info(f"Generating HTML -> {html_file}.")
         all_results = []
