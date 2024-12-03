@@ -24,10 +24,10 @@ class ZimowyDGW:
         def best(self, count):
             for s in self.results.values():
                 s.selected = False
-            selected = sorted(self.results.values(), key=lambda r: 0 if r.dqf else -r.points)[:count]
+            selected = sorted(self.results.values(), key=lambda r: 1 if r.dqf else -r.points)[:count]
             for s in selected:
                 s.selected = True
-            self.sum = sum(0 if s.dqf else s.points for s in selected)
+            self.sum = sum(1 if s.dqf else s.points for s in selected)
             return self.sum
 
         def __hash__(self):

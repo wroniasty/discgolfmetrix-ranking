@@ -8,6 +8,9 @@ leagues:
   DGW2024:
     title: Zimowy Puchar DGW - Sezon VIII
     competition_ids: [2806560,2806563,2806564,2819710, 2825130]
+  DGW2025:
+    title: Zimowy Puchar DGW - Sezon IX
+    competition_ids: [3161598,3169353,3176993]
 rating:
   outlier_fraction: 0.25
   prop_min_rating: 500
