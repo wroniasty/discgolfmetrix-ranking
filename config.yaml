@@ -11,6 +11,8 @@ leagues:
   DGW2025:
     title: Zimowy Puchar DGW - Sezon IX
     competition_ids: [3161598,3169353,3176993]
+    ignore_holes: { 3169353: [17,18] }
+
 rating:
   outlier_fraction: 0.25
   prop_min_rating: 500

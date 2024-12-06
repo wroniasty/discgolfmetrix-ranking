@@ -33,7 +33,7 @@ class ZimowyDGW:
         def __hash__(self):
             return hash(self.player)
 
-    def __init__(self, competition_ids: List[int], title='', api: Optional[MetrixAPI] = None, cache_file=None):
+    def __init__(self, competition_ids: List[int], title='', api: Optional[MetrixAPI] = None, cache_file=None,ignore_holes=None):
         self.competition_ids = competition_ids
 
         self.entries = {
@@ -60,13 +60,17 @@ class ZimowyDGW:
 
         self.api = api or MetrixAPI(cache_file=self.cache_file)
 
+        self.ignore_holes=ignore_holes
+
     def reload(self) -> List[Competition]:
         api = self.api
         data: List[Competition] = []
 
         for competition_id in self.competition_ids:
-            data.append(api.results(competition_id))
-
+            if self.ignore_holes and competition_id in self.ignore_holes:
+                data.append(api.results(competition_id,self.ignore_holes[competition_id]))
+            else:
+                data.append(api.results(competition_id))
         for competition in data:
             self.competitions.append(competition)
             rankings = {}

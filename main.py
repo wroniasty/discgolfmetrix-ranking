@@ -31,7 +31,6 @@ def main(args):
         league = config['leagues'].get(args.league)
 
 
-
     if args.quiet > 0:
         logger.setLevel(logging.ERROR)
     elif args.verbose > 0:
@@ -42,7 +41,7 @@ def main(args):
     # env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(os.path.realpath(__file__))),
     #                          trim_blocks=True, lstrip_blocks=True)
     # template = env.get_template("dgw.template.html")
-    dgw = ZimowyDGW(league.get('competition_ids'), league.get('title'), cache_file=args.cache_file)
+    dgw = ZimowyDGW(league.get('competition_ids'), league.get('title'), cache_file=args.cache_file, ignore_holes=league.get("ignore_holes"))
     logger.addHandler(DgwHtmlHandler(dgw))
     dgw.reload()
 
