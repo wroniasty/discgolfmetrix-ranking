@@ -7,12 +7,13 @@ leagues:
     competition_ids: [2398354,2398357,2398358,2398359,2398360,2429328,2433809,2439393,2439394,2439396]
   DGW2024:
     title: Zimowy Puchar DGW - Sezon VIII
-    competition_ids: [2806560,2806563,2806564,2819710, 2825130]
+    competition_ids: [2806560,2806563,2806564,2819710, 2825130,2828964,2832280,2837516,2842339,2850504]
+
   DGW2025:
     title: Zimowy Puchar DGW - Sezon IX
-    competition_ids: [3161598,3169353,3176993]
+    competition_ids: [3161598,3169353,3176993,3182408]
     ignore_holes: { 3169353: [17,18] }
 
 rating:
-  outlier_fraction: 0.25
+  outlier_fraction: 0.10
   prop_min_rating: 500
