@@ -4,6 +4,11 @@ from matplotlib import pylab
 from metrix import MetrixAPI
 from models import CompetitionResult, Competition
 import logging
+import math
+
+DNF_SCORE = 999
+MIN_PROPAGATORS = 10
+MAX_RESIDUALS = 50
 
 """rating.py: Kalkulator ratingu Zimowej Ligi DGW."""
 
@@ -23,13 +28,13 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
         if result.player.id in player_lookup:
             pl_rating = player_lookup[result.player.id]
             pl_score = par + result.diff
-            if pl_rating > prop_min_rating:
+            if pl_rating > prop_min_rating and pl_score < DNF_SCORE:
                 scores.append(pl_score)
                 ratings.append(pl_rating)
                 propagators_count += 1
 
     logging.info(f"Available propagators {propagators_count} of {len(competition.results)}")
-    if propagators_count < 3:
+    if propagators_count < MIN_PROPAGATORS:
         logging.warning(f"Too few propagators for {competition.name} #{competition.id} - skipping.")
         return
 
@@ -38,27 +43,33 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
     predictions = [(lr.intercept + lr.slope * rating) for rating in ratings]
     residuals = [(prediction - score) ** 2 for (prediction, score) in zip(predictions, scores)]
     rating_calc = lambda x: int(x / lr.slope - lr.intercept / lr.slope)
-    logging.info(f"Round par score {rating_calc(par)} diff per stroke {-1 / lr.slope} r-val {lr.rvalue}")
-
-    # compute the outliers
-    num_outliers = int(outlier_fraction * len(residuals))
-    outlier_thr = sorted(residuals)[-num_outliers]
-    new_rats, new_scs = [], []
-    for r, s, p, rs in zip(ratings, scores, predictions, residuals):
-        if rs > outlier_thr:
-            logging.debug(f"outlier {r} {s} {p} {rs}")
-        else:
-            new_rats.append(r)
-            new_scs.append(s)
-
-    # second - improved fit
-    lr_new = stats.linregress(new_rats, new_scs)
-    new_preds = [(lr_new.intercept + lr_new.slope * rating) for rating in new_rats]
-    residuals = [(prediction - score) ** 2 for (prediction, score) in zip(new_preds, new_scs)]
-    rating_calc_new = lambda x: int(x / lr_new.slope - lr_new.intercept / lr_new.slope)
-
     logging.info(
-        f"Robust round par score {rating_calc_new(par)} diff per stroke {-1 / lr_new.slope} r-val {lr_new.rvalue}")
+        f"Round par score {rating_calc(par)} diff per stroke {-1 / lr.slope} r-val {lr.rvalue}  max. resid. {math.sqrt(max(residuals))}")
+
+    while True:
+        # compute the outliers
+        num_outliers = int(outlier_fraction * len(residuals))
+        outlier_thr = sorted(residuals)[-num_outliers]
+        logging.info(f"number of outliers {num_outliers}")
+        new_rats, new_scs = [], []
+        for r, s, p, rs in zip(ratings, scores, predictions, residuals):
+            # print(math.sqrt(rs),math.sqrt(outlier_thr))
+            if rs > outlier_thr:
+                logging.debug(f"outlier {r} {s} {p} {rs}")
+            else:
+                new_rats.append(r)
+                new_scs.append(s)
+
+        # second - improved fit
+        lr_new = stats.linregress(new_rats, new_scs)
+        new_preds = [(lr_new.intercept + lr_new.slope * rating) for rating in new_rats]
+        residuals = [(prediction - score) ** 2 for (prediction, score) in zip(new_preds, new_scs)]
+        rating_calc_new = lambda x: int(x / lr_new.slope - lr_new.intercept / lr_new.slope)
+
+        logging.info(
+            f"Robust round par score {rating_calc_new(par)} diff per stroke {-1 / lr_new.slope} r-val {lr_new.rvalue} max. resid. {math.sqrt(max(residuals))}")
+        if math.sqrt(max(residuals)) < MAX_RESIDUALS:
+            break
 
     competition.rating_par = rating_calc_new(par)
     competition.rating_propagators = propagators_count
