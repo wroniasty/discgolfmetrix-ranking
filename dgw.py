@@ -110,7 +110,7 @@ class ZimowyDGW:
                             else:
                                 break
                         entry[1].comment = f"(OPEN) {M} na {LuOpen+1} = ({LuOpen + 1}-{entry[0]}+1)*(100/{Lu}) = ({LuOpen + 1 - entry[0]+1}*{(100/(LuOpen+1)):0.2f}) "
-                        entry[1].points = (LuOpen + 1 - M + 1)*(100/(LuOpen+1))
+                        entry[1].points = max((LuOpen + 1 - M + 1)*(100/(LuOpen+1)),1)
                     dgw_entry.results[competition.id] = entry[1]
                     self.entries[class_name][entry[1].player] = dgw_entry
 

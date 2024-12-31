@@ -6,9 +6,9 @@ from models import CompetitionResult, Competition
 import logging
 import math
 
-DNF_SCORE = 999
-MIN_PROPAGATORS = 10
-MAX_RESIDUALS = 50
+DNF_SCORE=999
+MIN_PROPAGATORS=10
+MAX_RESIDUALS=50
 
 """rating.py: Kalkulator ratingu Zimowej Ligi DGW."""
 
@@ -46,6 +46,7 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
     logging.info(
         f"Round par score {rating_calc(par)} diff per stroke {-1 / lr.slope} r-val {lr.rvalue}  max. resid. {math.sqrt(max(residuals))}")
 
+
     while True:
         # compute the outliers
         num_outliers = int(outlier_fraction * len(residuals))
@@ -53,7 +54,6 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
         logging.info(f"number of outliers {num_outliers}")
         new_rats, new_scs = [], []
         for r, s, p, rs in zip(ratings, scores, predictions, residuals):
-            # print(math.sqrt(rs),math.sqrt(outlier_thr))
             if rs > outlier_thr:
                 logging.debug(f"outlier {r} {s} {p} {rs}")
             else:
@@ -68,9 +68,9 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
 
         logging.info(
             f"Robust round par score {rating_calc_new(par)} diff per stroke {-1 / lr_new.slope} r-val {lr_new.rvalue} max. resid. {math.sqrt(max(residuals))}")
-        if math.sqrt(max(residuals)) < MAX_RESIDUALS:
+        if len(residuals) < MIN_PROPAGATORS or  math.sqrt(max(residuals)) < MAX_RESIDUALS:
             break
-
+        
     competition.rating_par = rating_calc_new(par)
     competition.rating_propagators = propagators_count
     competition.rating_per_stroke = -1 / lr_new.slope
