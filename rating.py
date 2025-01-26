@@ -13,7 +13,7 @@ MAX_RESIDUALS=50
 """rating.py: Kalkulator ratingu Zimowej Ligi DGW."""
 
 __author__ = "Bartosz Wilczynski"
-__copyright__ = "Copyright 2024, Bartosz Wilczynski, see LICENSE.txt for details."
+__copyright__ = "Copyright 2024-25, Bartosz Wilczynski, see LICENSE.txt for details."
 
 
 def calculate_round_rating(competition: Competition, player_lookup: Dict[int, int], plotting=False,
@@ -29,6 +29,7 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
             pl_rating = player_lookup[result.player.id]
             pl_score = par + result.diff
             if pl_rating > prop_min_rating and pl_score < DNF_SCORE:
+                #print("adding",pl_score,pl_rating)
                 scores.append(pl_score)
                 ratings.append(pl_rating)
                 propagators_count += 1
@@ -69,6 +70,7 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
         logging.info(
             f"Robust round par score {rating_calc_new(par)} diff per stroke {-1 / lr_new.slope} r-val {lr_new.rvalue} max. resid. {math.sqrt(max(residuals))}")
         if len(residuals) < MIN_PROPAGATORS or  math.sqrt(max(residuals)) < MAX_RESIDUALS:
+            #print("breaking",math.sqrt(max(residuals)),len(residuals))
             break
         
     competition.rating_par = rating_calc_new(par)
@@ -83,7 +85,7 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
         else:
             pl_rating = "NA"
 
-        if pl_score == 999:
+        if pl_score >=DNF_SCORE:
             result.rating = None
         else:
             result.rating = rating_calc_new(pl_score)
@@ -102,10 +104,12 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
         pylab.legend()
         pylab.title(f"{title}", fontsize=10)
         pylab.savefig(f"round-{competition.parent.id}-{competition.id}.png")
+        pylab.close()
 
         # robust fit plots
         pylab.figure()
         pylab.plot(new_rats, new_scs, "k.", label="robust fitted scores")
+        #print("robust ratings and scores",new_rats,new_scs)
         pylab.plot([rating_calc_new(max(new_scs) + 1), rating_calc_new(min(new_scs) - 1)],
                    [max(new_scs) + 1, min(new_scs) - 1], "b-", label="fitted trend")
         pylab.plot([rating_calc_new(par)], [par], "ro",
@@ -113,6 +117,7 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
         pylab.legend()
         pylab.title(f"{title} (robust)", fontsize=10)
         pylab.savefig(f"round-{competition.parent.id}-{competition.id}-robust.png")
+        pylab.close()
 
 # if __name__ == "__main__":
 #     import os
