@@ -8,7 +8,8 @@ import math
 
 DNF_SCORE=999
 MIN_PROPAGATORS=10
-MAX_RESIDUALS=50
+MAX_RESIDUALS=6
+MIN_RATING=200
 
 """rating.py: Kalkulator ratingu Zimowej Ligi DGW."""
 
@@ -25,10 +26,10 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
     par = competition.par
     propagators_count = 0
     for result in competition.results:
-        if result.player.id in player_lookup:
+        if result.valid and result.player.id in player_lookup:
             pl_rating = player_lookup[result.player.id]
             pl_score = par + result.diff
-            if pl_rating > prop_min_rating and pl_score < DNF_SCORE:
+            if  pl_rating > prop_min_rating and pl_score < DNF_SCORE :
                 #print("adding",pl_score,pl_rating)
                 scores.append(pl_score)
                 ratings.append(pl_rating)
@@ -47,20 +48,20 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
     logging.info(
         f"Round par score {rating_calc(par)} diff per stroke {-1 / lr.slope} r-val {lr.rvalue}  max. resid. {math.sqrt(max(residuals))}")
 
-
     while True:
         # compute the outliers
         num_outliers = int(outlier_fraction * len(residuals))
         outlier_thr = sorted(residuals)[-num_outliers]
         logging.info(f"number of outliers {num_outliers}")
+        #print("reszty",residuals,"res_thr",outlier_thr)
         new_rats, new_scs = [], []
         for r, s, p, rs in zip(ratings, scores, predictions, residuals):
-            if rs > outlier_thr:
+            if rs >= outlier_thr:
                 logging.debug(f"outlier {r} {s} {p} {rs}")
             else:
                 new_rats.append(r)
                 new_scs.append(s)
-
+        #print([x for x in zip(new_rats,new_scs)])
         # second - improved fit
         lr_new = stats.linregress(new_rats, new_scs)
         new_preds = [(lr_new.intercept + lr_new.slope * rating) for rating in new_rats]
@@ -88,7 +89,12 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
         if pl_score >=DNF_SCORE:
             result.rating = None
         else:
-            result.rating = rating_calc_new(pl_score)
+            rating_new_val = rating_calc_new(pl_score)
+            #print(rating_new_val)
+            if rating_new_val <= MIN_RATING:
+                result.rating = None 
+            else: #rating above MIN_RATING
+                result.rating = rating_new_val
 
         logging.debug(f"{result.player.name} rating  {pl_rating} diff {result.diff} par {par} score {pl_score} "
                       f"round rating {rating_calc(pl_score)} robust rating {result.rating}")
@@ -103,7 +109,10 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
         pylab.plot([rating_calc(par)], [par], "ro", label="par rating=%d (+/-%d)" % (rating_calc(par), -1 / lr.slope))
         pylab.legend()
         pylab.title(f"{title}", fontsize=10)
-        pylab.savefig(f"round-{competition.parent.id}-{competition.id}.png")
+        if  competition.parent is None:
+            pylab.savefig(f"round-{competition.id}.png")
+        else:
+            pylab.savefig(f"round-{competition.parent.id}-{competition.id}.png")
         pylab.close()
 
         # robust fit plots
@@ -116,7 +125,11 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
                    label="par rating=%d (+/-%d)" % (rating_calc_new(par), -1 / lr_new.slope))
         pylab.legend()
         pylab.title(f"{title} (robust)", fontsize=10)
-        pylab.savefig(f"round-{competition.parent.id}-{competition.id}-robust.png")
+        if  competition.parent is None:
+            pylab.savefig(f"round-{competition.id}-robust.png")
+        else:
+            pylab.savefig(f"round-{competition.parent.id}-{competition.id}-robust.png")
+
         pylab.close()
 
 # if __name__ == "__main__":

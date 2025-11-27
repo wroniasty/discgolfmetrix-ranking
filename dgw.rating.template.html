@@ -32,6 +32,7 @@
             <tr>
                 <th colspan="3">{{ c.name }}</th>
             </tr>
+	    {% if c.sub != [] %}
             {% for cs in c.sub %}
             <tr>
                 <td>{{ cs.name }}</td>
@@ -39,6 +40,13 @@
                 <td style="font-size: 0.7em; color: #aaa;"><i>{{cs.rating_propagators}}</i></td>
             </tr>
             {% endfor %}
+	    {% else %}
+	    <tr>
+                <td>{{ c.name }}</td>
+                <td>Par rating: <strong>{{ c.rating_par }}</strong> </td>
+                <td style="font-size: 0.7em; color: #aaa;"><i>{{c.rating_propagators}}</i></td>
+            </tr>
+	    {% endif %}
         </tbody>
         {% endfor %}
     </table>
@@ -51,27 +59,52 @@
                 <th colspan="3" class="text-center">{{ c.name }}</th>
             </tr>
             <tr>
-            {% for cs in c.sub %}
-                <td>
+	    {% if c.sub!= [] %}
+              {% for cs in c.sub %}
+	        <td>
                     <div class="text-center">{{ cs.name }} (<strong>{{ cs.rating_par}}</strong>) </div>
                     <table class="table table-striped table-hover">
-                {% for r in cs.results | sort(attribute='rating_or_zero', reverse=True) %}
+                      {% for r in cs.results | sort(attribute='rating_or_zero', reverse=True) %}
                         {% if r.rating_or_zero > 500  %}
-                 <tr>
-                     <td>{{ r.player.name }} </td>
-                     <td style="width: 256px;">
-                         <strong>{{ r.rating }}</strong>
-                     </td>
-                     <td style="width: 64px;">{{ r.diff }}</td>
-                 </tr>
-                        {% endif %}
-                {% endfor %}
+                      <tr>
+			<td>{{ r.player.name }} </td>
+			<td style="width: 256px;">
+                          <strong>{{ r.rating }}</strong>
+			</td>
+			<td style="width: 64px;">{{ r.diff }}</td>
+                      </tr>
+		        {% endif %}
+		      
+                      {% endfor %}
+		     
+                    </table>
+                </td> 
+	      {% endfor %}
+	    {% else %}
+                
+                    <div class="text-center">{{ c.name }} (<strong>{{ c.rating_par}}</strong>) </div>
+                    <table class="table table-striped table-hover">
+                      {% for r in c.results | sort(attribute='rating_or_zero', reverse=True) %}
+                         {% if r.rating_or_zero > 500  %}
+                      <tr>
+			<td>{{ r.player.name }} </td>
+			<td style="width: 256px;">
+                          <strong>{{ r.rating }}</strong>
+			</td>
+			<td style="width: 64px;">{{ r.diff }}</td>
+                      </tr>
+		       {% endif %}
+                      {% endfor %}
+		    
                     </table>
                 </td>
+             {% endif %}
+           
             {% endfor %}
             </tr>
         </tbody>
-        {% endfor %}
+	
+	
     </table>
 
 

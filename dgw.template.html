@@ -134,7 +134,8 @@
                 </h2>
                 <div id="collapse-c-{{c.id }}" class="accordion-collapse collapse" aria-labelledby="heading-c-{{c.id }}" data-bs-parent="#competitions">
                   <div class="accordion-body">
-                      <table class="table">
+                    <table class="table">
+		          {% if c.sub != [] %}
                           <thead>
                             <tr>
                                 <th colspan="3">Rating rund</th>
@@ -147,6 +148,18 @@
                               <td style="font-size: 0.7em;"><i>{{cs.rating_propagators}}</i></td>
                           </tr>
                           {% endfor %}
+			  {%else %}
+                          <thead>
+                            <tr>
+                                <th colspan="3">Rating rundy</th>
+                            </tr>
+                          </thead>
+                          <tr>
+                              <td>{{ c.name }}</td>
+                              <td>Rating: <strong>{{ c.rating_par }}</strong> </td>
+                              <td style="font-size: 0.7em;"><i>{{c.rating_propagators}}</i></td>
+                          </tr>
+			  {% endif %}
                       </table>
                       <table class="table table-hover">
                       {% for cs in c.sub %}

@@ -25,7 +25,7 @@ def main(args):
         return
 
     if args.league not in config['leagues']:
-        print(f"{args.league} not found in {args.config}.")
+        #print(f"{args.league} not found in {args.config}.")
         return
     else:
         league = config['leagues'].get(args.league)
@@ -41,20 +41,32 @@ def main(args):
     # env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(os.path.realpath(__file__))),
     #                          trim_blocks=True, lstrip_blocks=True)
     # template = env.get_template("dgw.template.html")
-    dgw = ZimowyDGW(league.get('competition_ids'), league.get('title'), cache_file=args.cache_file, ignore_holes=league.get("ignore_holes"))
+    dgw = ZimowyDGW(league.get('competition_ids'), league.get('title'), categories=league.get("categories"),scoring=league.get("scoring"),cache_file=args.cache_file, ignore_holes=league.get("ignore_holes"))
     logger.addHandler(DgwHtmlHandler(dgw))
     dgw.reload()
 
     if not args.skip_ratings:
+        #print("not skip")
         player_lookup = {
             player.id: player.pdga_rating for player in dgw.api.players.values() if (player.pdga_rating or 0) > 0
         }
         for comp in dgw.api.competitions.values():
-            for sub_comp in comp.sub:
-                if any(r.rating is not None for r in sub_comp.results) and not args.force_ratings:
+            #print("considering round",comp.id, "with subs",comp.sub)
+            if comp.sub==[]: # simple 1-round competition
+                if any(r.rating is not None for r in comp.results) and not args.force_ratings:
                     logging.warning(f"Skipping calculating ratings for {comp.name}, already in cache.")
                 else:
-                    rating.calculate_round_rating(sub_comp, player_lookup, plotting=True,
+                    #print("kalkulacja ratingu dla rundy",comp)
+                    rating.calculate_round_rating(comp, player_lookup, plotting=True,
+                                                  outlier_fraction=config.get("rating", {}).get("outlier_fraction", 0.25),
+                                                  prop_min_rating=config.get("rating", {}).get("prop_min_rating", 500))
+            else:
+                for sub_comp in comp.sub:
+                    if any(r.rating is not None for r in sub_comp.results) and not args.force_ratings:
+                        logging.warning(f"Skipping calculating ratings for {comp.name}, already in cache.")
+                    else:
+                        print("kalkulacja ratingu dla rundy",sub_comp.name)
+                        rating.calculate_round_rating(sub_comp, player_lookup, plotting=True,
                                                   outlier_fraction=config.get("rating", {}).get("outlier_fraction", 0.25),
                                                   prop_min_rating=config.get("rating", {}).get("prop_min_rating", 500))
     else:
