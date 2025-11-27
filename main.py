@@ -11,7 +11,6 @@ def main(args):
     import jinja2
     import os
     import yaml
-    import rating
     from rich.logging import RichHandler
     from pprint import pprint
 
@@ -41,11 +40,21 @@ def main(args):
     # env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(os.path.realpath(__file__))),
     #                          trim_blocks=True, lstrip_blocks=True)
     # template = env.get_template("dgw.template.html")
-    dgw = ZimowyDGW(league.get('competition_ids'), league.get('title'), categories=league.get("categories"),scoring=league.get("scoring"),cache_file=args.cache_file, ignore_holes=league.get("ignore_holes"))
+    default_categories = config.get("dgw", {}).get("default_categories")
+    scoring_tables = config.get("dgw", {}).get("scoring_tables", {})
+
+    dgw = ZimowyDGW(league.get('competition_ids'), league.get('title'), 
+                    categories=league.get("categories"),
+                    scoring=league.get("scoring"),cache_file=args.cache_file, ignore_holes=league.get("ignore_holes"),
+                    default_categories=default_categories,
+                    scoring_tables=scoring_tables,
+                    use_default_categories=args.use_default_categories
+                    )
     logger.addHandler(DgwHtmlHandler(dgw))
     dgw.reload()
 
     if not args.skip_ratings:
+        import rating
         #print("not skip")
         player_lookup = {
             player.id: player.pdga_rating for player in dgw.api.players.values() if (player.pdga_rating or 0) > 0
@@ -92,9 +101,11 @@ if __name__ == '__main__':
     argparser.add_argument('--league', '-l', type=str, required=True)
     argparser.add_argument('--skip-ratings', action='store_true')
     argparser.add_argument('--force-ratings', action='store_true', help="Force ratings calculation, ignore cached values.")
+    argparser.add_argument('--use-default-categories', action='store_true')
     argparser.add_argument('--config', '-c', type=str,
                            default=os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                                 'config.yaml'))
+    
     argparser.add_argument('--cache-file', type=str,
                            default=os.path.join(os.path.dirname(os.path.realpath(__file__)),
                                                 'results.cache.pkl'))

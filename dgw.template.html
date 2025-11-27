@@ -68,7 +68,7 @@
                     <th scope="row">{{ e.place }} </th>
                     <td>{{ e.player.name }}</td>
                     <td>
-                        <b>{{ '{0:0.2f}'.format(e.sum) }}</b>
+                        <b>{{ '{0:d}'.format(e.sum) }}</b>
                     </td>
                     <td>
                         <span class="badge bg-info text-dark" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modal_info_{{ e.player.id }}">
@@ -83,7 +83,7 @@
                                     <span class="text-danger">&bull; DNF</span>
                                 {% else %}
                                     <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" title="{{ e.results[c.id].comment }}">
-                                        {{ '{0:0.2f}'.format(e.results[c.id].points) }}</span>
+                                        {{ '{0:d}'.format(e.results[c.id].points) }}</span>
                                     (<span class="text-muted">{{e.results[c.id].place}}</span>)
                                 {% endif %}
                            {% else %}

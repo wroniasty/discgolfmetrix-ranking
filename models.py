@@ -17,6 +17,8 @@ class Player:
     pdga_id: int = None
     pdga_rating: int = None
 
+    default_category: str = "OPEN"
+
     def __hash__(self):
         return hash(self.id)
 
@@ -41,6 +43,7 @@ class RankingEntry:
     player: Player
     competition: 'Competition'
     sum: int
+    sum_tuple: Tuple[int, int] 
     diff: int
     points: int = 0
     scores: List[Score] = field(default_factory=list)
@@ -73,8 +76,8 @@ class CompetitionResult:
     order_number: int = None
     submitted_sum: int = None
     submitted_diff: int = None
-    valid: bool = True
-
+    valid: bool = True    
+    playoff_result: int = 0
     rating: Optional[int] = None
 
     @property
@@ -120,6 +123,8 @@ class Competition:
     rating_propagators: int = 0
     rating_per_stroke: float = 0
 
+    use_default_category: bool = False
+
     @property
     def par(self):
         return sum(tr.par for tr in self.tracks)
@@ -131,21 +136,30 @@ class Competition:
         else:
             results = self.results
 
-        classes = itertools.groupby(sorted(results, key=lambda r: r.class_name),
-                                    lambda r: r.class_name)
+        results = list(results)
+        playoff_results = { r.player.id: r.playoff_result for r in results }
+
+
+        if self.use_default_category:
+            classes = itertools.groupby(sorted(results, key=lambda r: r.player.default_category),
+                                                 lambda r: r.player.default_category)
+        else:                        
+            classes = itertools.groupby(sorted(results, key=lambda r: r.class_name),
+                                        lambda r: r.class_name)
         ranked_players = set()
         for class_name, class_results in classes:
+            
             class_results = list(class_results)
             by_player = itertools.groupby(sorted(class_results, key=lambda r: r.player.id),
                                           lambda r: r.player)
             rl = RankingList(name=class_name)
-            entries = []
-
-            for player, player_results in by_player:
+            entries = []            
+            for player, player_results in by_player:                            
                 ranked_players.add(player)
                 player_results = list(player_results)
                 entry = RankingEntry(player=player,
                                      competition=self,
+                                     sum_tuple=(sum(r.sum for r in player_results), playoff_results.get(player.id, 0)),
                                      sum=sum(r.sum for r in player_results),
                                      diff=sum(r.submitted_diff for r in player_results),
                                      scores=list(itertools.chain(*(r.scores for r in player_results)))
@@ -158,16 +172,18 @@ class Competition:
                     entry.dqf = any(not r.valid for r in player_results)
                 entries.append(entry)
 
-            entries = list(sorted(entries, key=lambda e: e.sum if not e.dqf else 1e12))
+            entries = list(sorted(entries, key=lambda e: e.sum_tuple if not e.dqf else (1e12, 1e12)))
             place = 1
             count = 1
-            previous_sum = entries[0].sum
+            previous_sum = entries[0].sum_tuple
             for e in entries:
-                if e.sum > previous_sum:
+
+                if e.sum_tuple > previous_sum:
                     place = count
-                    previous_sum = e.sum
+                    previous_sum = e.sum_tuple
                 e.place = place
                 rl.entries.append((place, e))
                 count = count + 1
 
+            #print("Yielding class", class_name, "with", len(rl.entries), "entries")
             yield class_name, rl

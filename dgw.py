@@ -40,14 +40,25 @@ class ZimowyDGW:
         def __hash__(self):
             return hash(self.player)
 
-    def __init__(self, competition_ids: List[int], title='', categories= DEF_CATS, api: Optional[MetrixAPI] = None, scoring="proportional",cache_file=None,ignore_holes=None):
+    def __init__(self, competition_ids: List[int], title='', categories=None, api: Optional[MetrixAPI] = None, scoring="proportional",cache_file=None,ignore_holes=None, 
+                 default_categories=None, use_default_categories=False, scoring_tables=None):
         self.competition_ids = competition_ids
         
         self.entries = {}
         self.rankings = {}
-        for cat in categories:
-            self.entries[cat]={}
-            self.rankings[cat]={}
+        self.default_categories = default_categories 
+        self.use_default_categories = use_default_categories
+        self.scoring_tables = scoring_tables 
+
+        if self.use_default_categories:
+            for cat in self.default_categories:
+                self.entries[cat]={}
+                self.rankings[cat]=None            
+        else:
+            for cat in categories:
+                self.entries[cat]={}
+                self.rankings[cat]={}
+        
         self.entries_sorted: Dict[str, List[ZimowyDGW.DGWEntry]] = {}
 
         self.scoring=scoring
@@ -73,31 +84,34 @@ class ZimowyDGW:
                 data.append(api.results(competition_id,self.ignore_holes[competition_id]))
             else:
                 data.append(api.results(competition_id))
-                
+        
         for competition in data:
-            self.competitions.append(competition)
-            rankings = {}
+            competition.use_default_category = self.use_default_categories
+            self.competitions.append(competition)            
+
             for class_name, ranking in competition.ranking:
                 class_name = class_name.upper()
-                if class_name not in self.rankings:
-                    #print("Class not in rankings",class_name,self.rankings.keys())
-                    if "MASTER" in class_name:
-                        real_class_name = "MASTERS"
-                    elif "WOMEN" in class_name:
-                        real_class_name = "WOMEN"
-                    elif "JUNIOR" in class_name:
-                        real_class_name = "JUNIOR"
-                    else:
-                        real_class_name = "OPEN"
-                else: #class_name in rankings
-                    real_class_name = class_name
+                real_class_name = class_name    
+
+                # if class_name not in self.rankings:
+                #     #print("Class not in rankings",class_name,self.rankings.keys())
+                #     if "MASTER" in class_name:
+                #         real_class_name = "MASTERS"
+                #     elif "WOMEN" in class_name:
+                #         real_class_name = "WOMEN"
+                #     elif "JUNIOR" in class_name:
+                #         real_class_name = "JUNIOR"
+                #     else:
+                #         real_class_name = "OPEN"
+                # else: #class_name in rankings
+                #     real_class_name = class_name
                     
                 self.rankings[real_class_name] = ranking
 
             #print("self.rankings.keys", list(self.rankings.keys()),"self.open_cat",self.open_cat,SCORING[self.scoring])
 
-            if self.open_cat not in self.rankings:
-                continue
+            #if self.open_cat not in self.rankings:
+            #    continue
 
             if self.scoring=="proportional":
                 #LuOpen = len(list(e for e in rankings["OPEN"].entries if not e[1].dqf)) # moglibyśmy nie liczyć DNFów
@@ -131,8 +145,9 @@ class ZimowyDGW:
                         dgw_entry.results[competition.id] = entry[1]
                         self.entries[class_name][entry[1].player] = dgw_entry
             else: # we'll search for scoring table in scoring
-                score_table=SCORING[self.scoring]
+                score_table=self.scoring_tables[self.scoring]['points']
                 for class_name, ranking in self.rankings.items():
+                    if ranking is None: continue
                     for entry in ranking.entries:
                         dgw_entry: ZimowyDGW.DGWEntry = self.entries[class_name].get(entry[1].player, self.DGWEntry(player=entry[1].player))
                         if entry[1].dqf:
@@ -144,7 +159,7 @@ class ZimowyDGW:
                             else: #outside of defined range
                                 points=1
                             entry[1].points = points
-                            entry[1].comment = f" miejsce {entry[0]} "
+                            entry[1].comment = f" miejsce {entry[0]} {"po dogrywce " if entry[1].sum_tuple[1]>0 else ""}"
                         dgw_entry.results[competition.id] = entry[1]
                         self.entries[class_name][entry[1].player] = dgw_entry
                             

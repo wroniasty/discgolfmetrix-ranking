@@ -147,6 +147,8 @@ class PlayersWidget(DataTable):
         Binding("f4", "edit()", "Edit player"),
         Binding("f5", "clear()", "Clear player"),
         Binding("f8", "delete()", "Delete player"),
+        Binding("f6", "sort()", "Sort"),
+        Binding("space", "set_category()", "Set category"),
     ]
 
     # DEFAULT_CSS = """
@@ -168,16 +170,25 @@ class PlayersWidget(DataTable):
         self.add_column("Name", key="name")
         self.add_column("PDGA ID", key="pdga_id")
         self.add_column("PDGA Rating", key="pdga_rating")
+        self.add_column("Default Category", key="default_category")
 
         self.players = {}
 
     def add_player(self, player: models.Player):
-        self.players[self.add_row(player.id, player.name, player.pdga_id, player.pdga_rating)] = player
+        self.players[self.add_row(player.id, player.name, player.pdga_id, player.pdga_rating, player.default_category)] = player
 
     def on_data_table_cell_highlighted(self, event: DataTable.CellHighlighted):
         table = self
         self.edited_player = table.players[event.cell_key.row_key]
         self.edited_cell = event.cell_key
+
+    def action_set_category(self):
+        categories = self.app.config.get("dgw", {}).get("default_categories", ["OPEN"])
+        self.edited_player.default_category = categories[(categories.index(self.edited_player.default_category) + 1) % len(categories)]
+        self.update_current_row()
+
+    def action_sort(self, event: DataTable.CellHighlighted):
+        pass
 
     def action_edit(self):
         self.app.push_screen(PlayerInputModal(player=self.edited_player),
@@ -188,6 +199,7 @@ class PlayersWidget(DataTable):
         table = self
         table.update_cell(self.edited_cell.row_key, "pdga_id", player.pdga_id)
         table.update_cell(self.edited_cell.row_key, "pdga_rating", player.pdga_rating)
+        table.update_cell(self.edited_cell.row_key, "default_category", player.default_category)
 
     def action_fetch(self):
         table = self
@@ -294,6 +306,8 @@ class RatingsWidget(DataTable):
 class CompetitionsTree(Tree):
     BINDINGS = [
         Binding("f8", "clear()", "Clear cached data"),
+        Binding("f4", "edit()", "Toggle playoff result"),
+        Binding("f7", "remove()", "Remove competition from cache"),
     ]
 
     def __init__(self, *args, **kwargs):
@@ -304,6 +318,18 @@ class CompetitionsTree(Tree):
 
     def on_tree_node_highlighted(self, event: Tree.NodeHighlighted):
         self.selected_node = event.node
+
+    def action_edit(self):
+        if isinstance(self.selected_node.data, models.CompetitionResult):
+            r: models.CompetitionResult = self.selected_node.data
+            r.playoff_result = (r.playoff_result or 0) + 1 if r.playoff_result < 10 else 0
+            self.selected_node.label = f"{self.selected_node.label.split('playoff=')[0]}playoff={r.playoff_result}"
+            
+            if r.competition.id not in self.app.api.cache['playoffs']:
+                self.app.api.cache['playoffs'][r.competition.id] = {}            
+            self.app.api.cache['playoffs'][r.competition.id][r.player.id] = r.playoff_result
+
+            self.app.notify(f"Toggled playoff result for {r.player.name} to {r.playoff_result}")
 
     def action_clear(self):
         self.app.push_screen(ConfirmModal(f"Clear cached data?"), self.clear_on_confirm)
@@ -426,10 +452,10 @@ class CacheEditorApp(App):
                 r_node = c_node.add(c_sub.name, data=c_sub)
                 logging.info(f"SubCompetition {c_sub.id} : {c_sub.name} [{c_sub.parent.id}]")
                 for i, r in enumerate(sorted(c_sub.results, key=lambda r: r.sum)):
-                    r_node.add_leaf(f"{i+1:2}. {r.player.name} {'[red]+' if r.diff > 0 else '[green]'}{r.diff}[/] ({r.sum}) rating=[yellow]{r.rating}[/yellow]", data=r)
+                    r_node.add_leaf(f"{i+1:2}. {r.player.name} {'[red]+' if r.diff > 0 else '[green]'}{r.diff}[/] ({r.sum}) rating=[yellow]{r.rating}[/yellow] playoff={r.playoff_result}", data=r)
             tree.root.expand()
 
-        for p in set(self.api.players.values()):
+        for p in sorted(set(self.api.players.values()), key=lambda p: p.name):
             player_table.add_player(p)
 
         logging.info(f"Players: {len(self.api.cache['players'])}")

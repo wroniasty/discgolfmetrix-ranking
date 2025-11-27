@@ -50,10 +50,20 @@ class MetrixAPI:
                 self.cache['competitions'] = {}
             if 'players' not in self.cache:
                 self.cache['players'] = []
+            if 'playoffs' not in self.cache:
+                self.cache['playoffs'] = {}
 
             for p in self.cache['players']:
                 self.players[p.id] = p
                 self.players[hash(p.name.upper())] = p
+        else:
+            self.cache = {
+                'competitions': {},
+                'players': [],
+                'ratings': {},
+                'ratings_info': {}, 
+                'playoffs': {},
+            }
 
     def save_cache(self):
         players_set = set()
@@ -61,7 +71,7 @@ class MetrixAPI:
             players_set.add(p)
         self.cache['players'] = list(sorted(players_set, key=lambda p: p.name))
 
-        for c in self.competitions.values():
+        for c in self.competitions.values():            
             for c_sub in c.sub:
                 if any(r.rating is not None for r in c_sub.results):
                     self.cache['ratings'][c_sub.id] = {r.player.id: r.rating for r in c_sub.results}
@@ -90,7 +100,11 @@ class MetrixAPI:
         return self.cache['competitions'][competition_id]
 
     def results(self, competition_id: int,ignore_holes=None):
-        reply = self.fetch_results_json(competition_id)
+        if competition_id not in self.competitions:
+            reply = self.fetch_results_json(competition_id)
+        else:
+            reply = self.cache['competitions'][competition_id]              
+
         if "Competition" not in reply:
             raise MetrixAPIError(f'Missing key - "Competition" in API reply (content=result)')
 
@@ -149,6 +163,8 @@ class MetrixAPI:
                     rating=self.cache['ratings'].get(competition.id, {}).get(
                         int(result['UserID'] or hash(result['Name'].upper())), None)
                 )
+                comp_result.playoff_result = self.cache['playoffs'].get(competition.id, {}).get(comp_result.player.id, 0)
+                
                 self.players[hash_id] = comp_result.player
                 round_missing = False
 
@@ -224,3 +240,6 @@ class MetrixAPI:
         if id not in self.competitions:
             self.competitions[id] = Competition(id=id, **params)
         return self.competitions[id]
+
+if __name__ == "__main__":
+    metrixApi = MetrixAPI(cache_file='metrix_cache.pkl')
