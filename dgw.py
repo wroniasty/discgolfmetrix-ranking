@@ -93,18 +93,18 @@ class ZimowyDGW:
                 class_name = class_name.upper()
                 real_class_name = class_name    
 
-                # if class_name not in self.rankings:
-                #     #print("Class not in rankings",class_name,self.rankings.keys())
-                #     if "MASTER" in class_name:
-                #         real_class_name = "MASTERS"
-                #     elif "WOMEN" in class_name:
-                #         real_class_name = "WOMEN"
-                #     elif "JUNIOR" in class_name:
-                #         real_class_name = "JUNIOR"
-                #     else:
-                #         real_class_name = "OPEN"
-                # else: #class_name in rankings
-                #     real_class_name = class_name
+                if class_name not in self.rankings:
+                    print("Class not in rankings",class_name,self.rankings.keys())
+                    if "MASTER" in class_name:
+                        real_class_name = "MASTERS"
+                    elif "WOMEN" in class_name:
+                        real_class_name = "WOMEN"
+                    elif "JUNIOR" in class_name:
+                        real_class_name = "JUNIOR"
+                    else:
+                        real_class_name = "OPEN"
+                else: #class_name in rankings
+                    real_class_name = class_name
                     
                 self.rankings[real_class_name] = ranking
 
