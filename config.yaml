@@ -1,28 +1,8 @@
 
 leagues:
-  DGW2022:
-    title: Zimowy Puchar DGW 2022
-    competition_ids: [1963931,1989984,1995699,2003169,2004158,2008480,2014161,2020455,2025408, 2031939]
-    categories: {"OPEN", "WOMEN", "MASTERS", "JUNIOR"}
-    scoring: proportional
-    
-  DGW2023:
-    title: Zimowy Puchar DGW - Sezon VII
-    competition_ids: [2398354,2398357,2398358,2398359,2398360,2429328,2433809,2439393,2439394,2439396]
-    categories: {"OPEN", "WOMEN", "MASTERS", "JUNIOR"}
-    scoring: proportional
-    
-  DGW2024:
-    title: Zimowy Puchar DGW - Sezon VIII
-    competition_ids: [2806560,2806563,2806564,2819710, 2825130,2828964,2832280,2837516,2842339,2850504]
-    categories: {"OPEN", "WOMEN", "MASTERS", "JUNIOR"}
-    scoring: proportional
-    
-  DGW2025:
-    title: Zimowy Puchar DGW - Sezon IX
-    competition_ids: [3161598,3169353,3176993,3182408,3185707,3192700,3198732,3201276,3208850,3214050]
-    ignore_holes: { 3169353: [17,18] }
-    categories: {"OPEN", "WOMEN", "MASTERS", "JUNIOR"}
+  DGW2020:
+    title: Zimowy Puchar DGW 2020
+    competition_ids: [1114648, 1124497, 1125804, 1130803, 1135352, 1138689, 1141502, 1146997, 1152773 ]
     scoring: proportional
     
   TLDG2025:
@@ -34,7 +14,7 @@ leagues:
     
   DGW2026:
     title: Zimowy Puchar DGW - Sezon X
-    competition_ids: [3478960, 3505500]
+    competition_ids: [3478960, 3505500, 3508499 ]
     ignore_holes: {  }
     categories: {"BLUE RAH >900", "WHITE RAD 850-899", "RED RAE 800-849", "GREEN RAF 751-799", "PURPLE 0-750"}
     scoring: dgpt100
