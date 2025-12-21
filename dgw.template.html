@@ -52,7 +52,7 @@
             {% for cn, rl in data.entries_sorted.items() %}
             <thead>
                 <tr>
-                    <th colspan="4">{{ cn }}            <a name="{{cn}}"></a></th>
+                    <th colspan="5">{{ cn }}            <a name="{{cn}}"></a></th>
                     {% for c in data.competitions %}
                         <th class="text-center">
                             <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" title="{{ c.name }}">
@@ -67,11 +67,12 @@
                 <tr>
                     <th scope="row">{{ e.place }} </th>
                     <td>{{ e.player.name }}</td>
+		    <td>{{ data.zimowy_rating(e.player.id) }}</td> 
                     <td>
                         <b>{{ '{0:d}'.format(e.sum) }}</b>
                     </td>
                     <td>
-                        <span class="badge bg-info text-dark" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modal_info_{{ e.player.id }}">
+                        <span class="badge bg-info text-dark" style="cursor: pointer;" data-bs-toggle="modal" data-bs-target="#modal_info_{{ e.player.id }}_{{cn[:3]}}">
                             i
                         </span>
                     </td>
@@ -241,7 +242,7 @@
 
 {% for cn, rl in data.entries_sorted.items() %}
     {% for e in rl %}
-<div class="modal" tabindex="-1" id="modal_info_{{ e.player.id }}">
+<div class="modal" tabindex="-1" id="modal_info_{{ e.player.id }}_{{cn[:3]}}">
   <div class="modal-dialog modal-xl modal-fullscreen-xxl-down">
     <div class="modal-content">
       <div class="modal-header">
@@ -309,6 +310,7 @@
                     <th>Rating</th>
                 </tr>
               </thead>
+	      {% set player_rat = namespace(count=0,sum=0) %}
            {% for c in data.competitions %}
               {% for cs in c.sub %}
                  {% if c.id in e.results %}
@@ -316,13 +318,26 @@
                           <td>{{ cs.name }}</td>
                           {% if cs.id in ratings and e.player.id in ratings[cs.id] %}
                               <td><b>{{ratings[cs.id][e.player.id]}}</b></td>
+			      
+			      {% if (ratings[cs.id][e.player.id]) is not none %}     
+			      {% set player_rat.sum = player_rat.sum+ratings[cs.id][e.player.id] %}
+			      {% set player_rat.count = player_rat.count + 1 %}
+			      {% endif %}
                           {% else %}
-                              <td><i>Brak</i></td>
+                              <td><b>None</b></td>
                           {% endif %}
                       </tr>
                  {% endif %}
               {% endfor %}
-            {% endfor %}
+              {% endfor %}
+             
+	     {% if player_rat.count>0 %}	      
+	       {% set avg_rating=player_rat.sum//player_rat.count %}
+	        <tr>
+	  	  <td> <em>Zimowy rating:</em></td>
+		  <td><em><b> {{data.zimowy_rating(e.player.id)}}</b></em></td>
+	        </tr>
+              {% endif %} 
           </table>
       </div>
       <div class="modal-footer">

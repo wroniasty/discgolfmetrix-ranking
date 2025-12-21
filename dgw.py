@@ -198,6 +198,34 @@ class ZimowyDGW:
         with open(f'{html_file}', 'w', encoding='utf-8') as f:
             f.write(template.render(data=self, ratings=self.api.cache['ratings'], top_rounds=top_results))
 
+    def zimowy_rating(self,player_id):
+        r_sum=0
+        r_cnt=0
+        for c in self.competitions:
+            for cs in c.sub:
+                if player_id in self.api.cache["ratings"][cs.id]: #player played this round
+                    rat=self.api.cache["ratings"][cs.id][player_id]
+                    if not rat is None: 
+                        r_sum+=rat
+                        r_cnt+=1
+        if r_cnt==0:
+            return "<500"
+        else: # we have a rating
+            init_rat= int(r_sum/r_cnt)
+            r_sum=0
+            r_cnt=0
+            for c in self.competitions:
+                for cs in c.sub:
+                    if player_id in self.api.cache["ratings"][cs.id]: #player played this round
+                        rat=self.api.cache["ratings"][cs.id][player_id]
+                        if not rat is None and rat>init_rat-100: #exclude rounds more than 100 below init_rating
+                            r_sum+=rat
+                            r_cnt+=1
+            return int(r_sum/r_cnt)
+            
+
+
+        
     def render_rating(self, filename: str):
         env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(os.path.realpath(__file__))),
                                  trim_blocks=True, lstrip_blocks=True)

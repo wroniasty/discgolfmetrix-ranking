@@ -9,7 +9,7 @@ import math
 DNF_SCORE=999
 MIN_PROPAGATORS=10
 MAX_RESIDUALS=6
-MIN_RATING=200
+MIN_RATING=500
 
 """rating.py: Kalkulator ratingu Zimowej Ligi DGW."""
 
@@ -18,7 +18,7 @@ __copyright__ = "Copyright 2024-25, Bartosz Wilczynski, see LICENSE.txt for deta
 
 
 def calculate_round_rating(competition: Competition, player_lookup: Dict[int, int], plotting=False,
-                           outlier_fraction=0.25, prop_min_rating=500):
+                           outlier_fraction=0.25, prop_min_rating=MIN_RATING):
     scores = []
     ratings = []
     logging.info(f"Processing round {competition.name} #{competition.id} par {competition.par}")
@@ -29,7 +29,8 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
         if result.valid and result.player.id in player_lookup:
             pl_rating = player_lookup[result.player.id]
             pl_score = par + result.diff
-            if  pl_rating > prop_min_rating and pl_score < DNF_SCORE :
+            
+            if  pl_rating > prop_min_rating and pl_score < DNF_SCORE: # and result.diff<len(result.scores)*4:
                 #print("adding",pl_score,pl_rating)
                 scores.append(pl_score)
                 ratings.append(pl_rating)
@@ -38,7 +39,7 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
     logging.info(f"Available propagators {propagators_count} of {len(competition.results)}")
     if propagators_count < MIN_PROPAGATORS:
         logging.warning(f"Too few propagators for {competition.name} #{competition.id} - skipping.")
-        return
+        return None
 
     # first approx fit
     lr = stats.linregress(ratings, scores)
@@ -92,7 +93,7 @@ def calculate_round_rating(competition: Competition, player_lookup: Dict[int, in
             rating_new_val = rating_calc_new(pl_score)
             #print(rating_new_val)
             if rating_new_val <= MIN_RATING:
-                result.rating = None 
+                result.rating = None
             else: #rating above MIN_RATING
                 result.rating = rating_new_val
 
