@@ -34,7 +34,13 @@ class ZimowyDGW:
             selected = sorted(self.results.values(), key=lambda r: 1 if r.dqf else -r.points)[:count]
             for s in selected:
                 s.selected = True
-            self.sum = sum(1 if s.dqf else s.points for s in selected)
+            self.sum = 0
+            for s in selected:
+                if s.dqf and not s.dns:
+                    self.sum+=1
+                else:
+                    self.sum+=s.points
+
             return self.sum
 
         def __hash__(self):
@@ -144,6 +150,7 @@ class ZimowyDGW:
                             entry[1].points =polish_rounding( max((LuOpen + 1 - M + 1)*(100/(LuOpen+1)),1))
                         dgw_entry.results[competition.id] = entry[1]
                         self.entries[class_name][entry[1].player] = dgw_entry
+                        
             else: # we'll search for scoring table in scoring
                 score_table=self.scoring_tables[self.scoring]['points']
                 for class_name, ranking in self.rankings.items():
@@ -151,13 +158,21 @@ class ZimowyDGW:
                     for entry in ranking.entries:
                         dgw_entry: ZimowyDGW.DGWEntry = self.entries[class_name].get(entry[1].player, self.DGWEntry(player=entry[1].player))
                         if entry[1].dqf:
-                            entry[1].points = 1
-                            entry[1].comment = "DNF = 1 pkt"
+                            if entry[1].dns:
+                                print("DNS",entry[1].player)
+                                entry[1].points = 0
+                                entry[1].comment = "DNS = 0 pkt"
+                                
+                            else: #not DNS, DNF
+                                entry[1].points = 1
+                                entry[1].comment = "DNF = 1 pkt"
                         else:
                             if entry[0]<len(score_table):
                                 points = score_table[entry[0]-1]
                             else: #outside of defined range
                                 points=1
+                                print("outside table")
+                                
                             entry[1].points = points
                             entry[1].comment = f" miejsce {entry[0]} {"po dogrywce " if entry[1].sum_tuple[1]>0 else ""}"
                         dgw_entry.results[competition.id] = entry[1]

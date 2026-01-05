@@ -52,7 +52,7 @@
             {% for cn, rl in data.entries_sorted.items() %}
             <thead>
                 <tr>
-                    <th colspan="5">{{ cn }}            <a name="{{cn}}"></a></th>
+                    <th colspan="4">{{ cn }}            <a name="{{cn}}"></a></th>
                     {% for c in data.competitions %}
                         <th class="text-center">
                             <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" title="{{ c.name }}">
@@ -66,8 +66,8 @@
                 {% for e in rl %}
                 <tr>
                     <th scope="row">{{ e.place }} </th>
-                    <td>{{ e.player.name }}</td>
-		    <td>{{ data.zimowy_rating(e.player.id) }}</td> 
+                    <td>{{ e.player.name }}</td><!--
+		    <td>{{ data.zimowy_rating(e.player.id) }}</td>-->
                     <td>
                         <b>{{ '{0:d}'.format(e.sum) }}</b>
                     </td>
@@ -80,8 +80,10 @@
                        <td class="text-center {{ 'table-success' if c.id in e.results and e.results[c.id].selected and not e.results[c.id].dqf }}
 {{ 'table-warning' if c.id in e.results and e.results[c.id].dqf }}">
                            {% if c.id in e.results %}
-                                {% if e.results[c.id].dqf %}
-                                    <span class="text-danger">&bull; DNF</span>
+                                {% if e.results[c.id].dns %}
+                                    <span class="text-danger">&bull; DNS (0)</span>
+                                {% elif e.results[c.id].dqf %}
+                                    <span class="text-danger">&bull; DNF (1) </span>
                                 {% else %}
                                     <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" title="{{ e.results[c.id].comment }}">
                                         {{ '{0:d}'.format(e.results[c.id].points) }}</span>
@@ -222,7 +224,7 @@
                           <tbody>
                           {% for m, re in rl.entries %}
                              <tr class="{{ 'table-warning' if re.dqf }}">
-                                 <th style="width: 64px;" scope="row">{{ m if not re.dqf else 'DNF'}}</th>
+                                 <th style="width: 64px;" scope="row">{{ m if not re.dqf else 'DNF/S'}}</th>
                                  <td>{{ re.player.name }} </td>
                                  <td style="width: 64px;"><strong>{{ re.sum }}</strong> </td>
                                  <td style="width: 64px;" class=" text-center {{'table-danger' if re.diff > 0}} {{'table-success' if re.diff < 0}} ">
@@ -254,8 +256,8 @@
               <thead>
                 <tr>
                     <th colspan="2">Zawody</th>
-                    <th>Miejsce</th>
-                    <th colspan="2">Punkty</th>
+                    <th colspan="2">Miejsce</th>
+                    <th>Punkty</th>
                     <th>Zaliczone?</th>
                 </tr>
               </thead>
@@ -265,10 +267,12 @@
                    <td style="width: 40px">{{ loop.index }}.</td>
                    <th scope="row">{{ c.name }}</th>
                    {% if c.id in e.results %}
-                       {% if e.results[c.id].dqf %}
+                       {% if e.results[c.id].dqf and not e.results[c.id].dns %}
                            <td colspan="4"><span class="text-danger">DNF</span> </td>
+                       {% elif e.results[c.id].dqf and e.results[c.id].dns %}
+                           <td colspan="4"><span class="text-danger">DNS {{e.results[c.id].points}}</span> </td>
                        {% else %}
-                           <td><span class="text-primary">{{e.results[c.id].place}}</span></td>
+                           <td><span class="text-primary">{{e.results[c.id].place}}</span></td> 
                            <td><i>{{ e.results[c.id].comment }}</i></td>
                            <td><strong>{{ '{0:0.3f}'.format(e.results[c.id].points) }}</strong></td>
                            <td>{{ 'TAK' if e.results[c.id].selected else 'NIE' }}</td>

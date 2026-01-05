@@ -259,7 +259,7 @@ class RatingsWidget(DataTable):
 
     def on_data_table_cell_highlighted(self, event: DataTable.CellHighlighted):
         self.edited_cell = event.cell_key
-
+    
     def action_clear(self):
         comp_id = self.get_cell(self.edited_cell.row_key, "id")
         self.app.push_screen(ConfirmModal(f"Clear ratings for {comp_id}?"), self.clear_on_confirm)
@@ -307,6 +307,7 @@ class CompetitionsTree(Tree):
     BINDINGS = [
         Binding("f8", "clear()", "Clear cached data"),
         Binding("f4", "edit()", "Toggle playoff result"),
+        Binding("f5", "switch()", "Toggle Valid/DNF/DNS"),
         Binding("f7", "remove()", "Remove competition from cache"),
     ]
 
@@ -328,8 +329,18 @@ class CompetitionsTree(Tree):
             if r.competition.id not in self.app.api.cache['playoffs']:
                 self.app.api.cache['playoffs'][r.competition.id] = {}            
             self.app.api.cache['playoffs'][r.competition.id][r.player.id] = r.playoff_result
-
+            
             self.app.notify(f"Toggled playoff result for {r.player.name} to {r.playoff_result}")
+
+    def action_switch(self):
+        pass # disable switching DNFs
+        #if isinstance(self.selected_node.data, models.CompetitionResult):
+            # r: models.CompetitionResult = self.selected_node.data
+            # r.dnf = (r.dnf or 0) + 1 if r.dnf < 2 else 0
+            # self.selected_node.label = f"{self.selected_node.label.split('DNF=')[0]}DNF={r.dnf}"
+            
+            
+            # self.app.notify(f"Toggled DNF result for {r.player.name} to {r.dnf}")
 
     def action_clear(self):
         self.app.push_screen(ConfirmModal(f"Clear cached data?"), self.clear_on_confirm)
@@ -452,7 +463,8 @@ class CacheEditorApp(App):
                 r_node = c_node.add(c_sub.name, data=c_sub)
                 logging.info(f"SubCompetition {c_sub.id} : {c_sub.name} [{c_sub.parent.id}]")
                 for i, r in enumerate(sorted(c_sub.results, key=lambda r: r.sum)):
-                    r_node.add_leaf(f"{i+1:2}. {r.player.name} {'[red]+' if r.diff > 0 else '[green]'}{r.diff}[/] ({r.sum}) rating=[yellow]{r.rating}[/yellow] playoff={r.playoff_result}", data=r)
+                    #print(r)
+                    r_node.add_leaf(f"{i+1:2}. {r.player.name} {'[red]+' if r.diff > 0 else '[green]'}{r.diff}[/] ({r.sum}) rating=[yellow]{r.rating}[/yellow] DNF={r.dnf} playoff={r.playoff_result}", data=r)
             tree.root.expand()
 
         for p in sorted(set(self.api.players.values()), key=lambda p: p.name):

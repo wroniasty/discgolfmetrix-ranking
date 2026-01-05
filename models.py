@@ -51,7 +51,8 @@ class RankingEntry:
     selected: bool = False
     place: int = 0
     dqf: bool = False
-
+    dns: bool = False
+    
     @property
     def calculated_sum(self):
         return sum(s.result for s in self.scores)
@@ -79,6 +80,8 @@ class CompetitionResult:
     valid: bool = True    
     playoff_result: int = 0
     rating: Optional[int] = None
+    dnf: int= 0
+    
 
     @property
     def sum(self):
@@ -164,12 +167,19 @@ class Competition:
                                      diff=sum(r.submitted_diff for r in player_results),
                                      scores=list(itertools.chain(*(r.scores for r in player_results)))
                                      )
-                if len(player_results) < len(self.sub):
-                    entry.dqf = True
-                elif any(len(pr.scores) < len(self.tracks) for pr in player_results):
-                    entry.dqf = True
-                else:
-                    entry.dqf = any(not r.valid for r in player_results)
+                for pr in player_results:
+                    if pr.dnf==1:
+                        entry.dqf=True
+                    if pr.dnf==2:
+                        entry.dqf=True
+                        entry.dns=True
+                        
+                if not entry.dqf: #not a DQF result according to metrix        
+                    if len(player_results) < len(self.sub): # too few rounds entered
+                        entry.dqf = True #DNF
+                    elif any(len(pr.scores) < len(self.tracks) for pr in player_results):
+                        entry.dqf = True # too few holes
+                
                 entries.append(entry)
 
             entries = list(sorted(entries, key=lambda e: e.sum_tuple if not e.dqf else (1e12, 1e12)))

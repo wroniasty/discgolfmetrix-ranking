@@ -8,7 +8,7 @@ import math
 
 DNF_SCORE=999
 MIN_PROPAGATORS=10
-MAX_RESIDUALS=6
+MAX_RESIDUALS=7
 MIN_RATING=500
 
 """rating.py: Kalkulator ratingu Zimowej Ligi DGW."""

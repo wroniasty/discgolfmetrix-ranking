@@ -170,12 +170,15 @@ class MetrixAPI:
 
                 if result.get('DNF') not in (None, "0"):
                     comp_result.valid = False
+                    comp_result.dnf=int(result.get("DNF"))
+                    #print(result['Name'],"DNF",result.get("DNF"))
 
                 if len(list(plresult for plresult in result['PlayerResults'] if
                             isinstance(plresult, dict) and "Result" in plresult)) == 0:
                     logging.warning(f"[{competition.id}] {competition.name} - {comp_result.player.name}: "
                                     f"Brak wyników rundy (używam 999).")
                     comp_result.valid = False
+                    comp_result.dnf = 1
                     score = Score(result=999, diff=999 - competition.par)
                     comp_result.scores.append(score)
                     round_missing = True
@@ -213,8 +216,7 @@ class MetrixAPI:
                 #                   f"({len(comp_result.scores)} < {len(competition.tracks)}) submitted == {comp_result.submitted_sum}.")
                 #     comp_result.valid = False
 
-                if result.get('DNF') not in (None, "0"):
-                    comp_result.valid = False
+                
 
                 competition.results.append(comp_result)
 
