@@ -334,13 +334,11 @@ class CompetitionsTree(Tree):
 
     def action_switch(self):
         pass # disable switching DNFs
-        #if isinstance(self.selected_node.data, models.CompetitionResult):
-            # r: models.CompetitionResult = self.selected_node.data
-            # r.dnf = (r.dnf or 0) + 1 if r.dnf < 2 else 0
-            # self.selected_node.label = f"{self.selected_node.label.split('DNF=')[0]}DNF={r.dnf}"
-            
-            
-            # self.app.notify(f"Toggled DNF result for {r.player.name} to {r.dnf}")
+        # if isinstance(self.selected_node.data, models.CompetitionResult):
+        #     r: models.CompetitionResult = self.selected_node.data
+        #     r.dnf = (r.dnf or 0) + 1 if r.dnf < 2 else 0
+        #     self.selected_node.label = f"{self.selected_node.label.split('DNF=')[0]}DNF={r.dnf}"           
+#            self.app.notify(f"Toggled DNF result for {r.player.name} to {r.dnf}")
 
     def action_clear(self):
         self.app.push_screen(ConfirmModal(f"Clear cached data?"), self.clear_on_confirm)
