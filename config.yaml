@@ -14,7 +14,7 @@ leagues:
     
   DGW2026:
     title: Zimowy Puchar DGW - Sezon X
-    competition_ids: [3478960, 3505500, 3508499, 3508500, 3510629 ]
+    competition_ids: [3478960, 3505500, 3508499, 3508500, 3510629, 3525362, 3525363 ]
     ignore_holes: {  }
     categories: {"BLUE RAH >900", "WHITE RAD 850-899", "RED RAE 800-849", "GREEN RAF 751-799", "PURPLE 0-750"}
     scoring: dgpt100
