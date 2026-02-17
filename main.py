@@ -83,8 +83,12 @@ def main(args):
 
     dgw.api.save_cache()
 
-    html_file = f'{args.league}.ranking.html'
-    dgw.render_ranking(html_file)
+    if not args.zimowy_rating: 
+        html_file = f'{args.league}.ranking.html'
+    else: #add zimowy_rating
+        html_file = f'{args.league}.ranking-new.html'
+    dgw.render_ranking(html_file,args.zimowy_rating)
+    
     html_file = f'{args.league}.rating.html'
     dgw.render_rating(html_file)
 
@@ -111,6 +115,7 @@ if __name__ == '__main__':
                                                 'results.cache.pkl'))
     argparser.add_argument('-v', action="count", dest="verbose", default=0)
     argparser.add_argument('--quiet', '-q', action="store_const", const=True, default=False)
+    argparser.add_argument('--zimowy-rating', '-z', action="store_const", const=True, default=False)
 
     main(argparser.parse_args())
 

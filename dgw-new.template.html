@@ -52,7 +52,7 @@
             {% for cn, rl in data.entries_sorted.items() %}
             <thead>
                 <tr>
-                    <th colspan="4">{{ cn }}            <a name="{{cn}}"></a></th>
+                    <th colspan="5">{{ cn }}            <a name="{{cn}}"></a></th>
                     {% for c in data.competitions %}
                         <th class="text-center">
                             <span class="d-inline-block" tabindex="0" data-bs-toggle="tooltip" title="{{ c.name }}">
@@ -67,6 +67,7 @@
                 <tr>
                     <th scope="row">{{ e.place }} </th>
                     <td>{{ e.player.name }}</td>
+		    <td>{{ data.zimowy_rating(e.player.id) }}</td> <!--  -->
                     <td>
                         <b>{{ '{0:d}'.format(e.sum) }}</b>
                     </td>

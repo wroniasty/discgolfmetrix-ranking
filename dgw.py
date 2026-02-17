@@ -193,10 +193,14 @@ class ZimowyDGW:
 
         return data
 
-    def render_ranking(self, filename: str):
+    def render_ranking(self, filename: str,zimowy_rating=False):
+        
         env = jinja2.Environment(loader=jinja2.FileSystemLoader(os.path.dirname(os.path.realpath(__file__))),
                                  trim_blocks=True, lstrip_blocks=True)
-        template = env.get_template("dgw.template.html")
+        if not zimowy_rating:
+            template = env.get_template("dgw.template.html")
+        else:
+            template = env.get_template("dgw-new.template.html")
         html_file = f'{filename}'
         logging.info(f"Generating HTML -> {html_file}.")
         all_results = []
