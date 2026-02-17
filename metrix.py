@@ -178,7 +178,8 @@ class MetrixAPI:
                     logging.warning(f"[{competition.id}] {competition.name} - {comp_result.player.name}: "
                                     f"Brak wyników rundy (używam 999).")
                     comp_result.valid = False
-                    comp_result.dnf = 1
+                    if comp_result.dnf ==0:
+                        comp_result.dnf = 1
                     score = Score(result=999, diff=999 - competition.par)
                     comp_result.scores.append(score)
                     round_missing = True
