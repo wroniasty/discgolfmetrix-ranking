@@ -18,7 +18,14 @@ leagues:
     ignore_holes: {  }
     categories: {"BLUE RAH >900", "WHITE RAD 850-899", "RED RAE 800-849", "GREEN RAF 751-799", "PURPLE 0-750"}
     scoring: dgpt100
-    
+
+  DGW2027:
+    title: Zimowy Puchar DGW - Sezon XI
+    competition_ids: [3826179, ]
+    ignore_holes: {  }
+    categories: {"BLUE >899", "WHITE 850-899", "RED 800-849", "GREEN 750-799", "PURPLE 0-749"}
+    scoring: dgpt100
+
 rating:
   outlier_fraction: 0.15
   prop_min_rating: 700
